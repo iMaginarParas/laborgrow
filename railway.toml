@@ -1,9 +1,6 @@
 [build]
-builder = "python"
-python_version = "3.11"
-install_command = "pip install -r requirements.txt"
+builder = "NIXPACKS"
 
 [deploy]
-start_command = "uvicorn main:app --host 0.0.0.0 --port $PORT"
-restart_policy_type = "on_failure"
-restart_policy_max_retries = 10
+startCommand = "uvicorn main:app --host 0.0.0.0 --port $PORT"
+restartPolicyType = "ON_FAILURE"
