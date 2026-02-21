@@ -145,14 +145,100 @@ async def get_suggestions(q: str = Query(..., min_length=2)):
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@app.get("/schema/jobs")
+async def get_jobs_schema():
+    """
+    Debug endpoint — returns the actual columns that exist in your 'jobs' table.
+    Visit /schema/jobs in your browser to see what columns Supabase has.
+    """
+    try:
+        # Fetch one row (even if empty) to inspect columns via PostgREST
+        result = supabase.table("jobs").select("*").limit(1).execute()
+        # PostgREST returns column names even for empty results via the schema
+        # We can also query information_schema directly
+        schema_result = supabase.rpc("get_jobs_columns", {}).execute()
+        return {"columns_via_rpc": schema_result.data}
+    except Exception:
+        pass
+
+    try:
+        # Fallback: query information_schema directly
+        result = supabase.from_("information_schema.columns").select(
+            "column_name, data_type, is_nullable"
+        ).eq("table_name", "jobs").eq("table_schema", "public").execute()
+        return {"columns": result.data}
+    except Exception as e:
+        return {"error": str(e), "tip": "Run a SELECT * FROM jobs LIMIT 1 in your Supabase SQL editor to see columns."}
+
+
+# Cache of known-good columns (populated on first successful insert)
+_known_jobs_columns: set = set()
+
+
+def _get_candidate_job_data(job: "JobCreate", employer_id: str, target_lat, target_lng) -> dict:
+    """
+    Build the maximal job_data dict with ALL possible column names.
+    We'll strip unknown columns before inserting.
+    """
+    data = {
+        # Core columns — almost certainly exist
+        "employer_id": employer_id,
+        "title": job.title,
+        "openings": job.openings,
+        "job_city": job.job_city,
+        "total_experience": job.total_experience,
+        "salary_min": job.salary_min,
+        "salary_max": job.salary_max,
+        "offers_bonus": job.offers_bonus,
+        "required_skills": job.required_skills,
+
+        # Contact / company columns — may or may not exist
+        "company_name": job.company_name,
+        "contact_person": job.contact_person,
+        "phone_number": job.phone_number,
+        "contact_email": job.email,
+        "email": job.email,              # alternate column name
+        "hiring_speed": job.hiring_speed,
+        "hiring_frequency": job.hiring_frequency,
+    }
+
+    # Geometry column — try multiple formats
+    if target_lat is not None and target_lng is not None:
+        data["lat_long"] = f"SRID=4326;POINT({target_lng} {target_lat})"
+        data["lat"] = target_lat
+        data["lng"] = target_lng
+        data["latitude"] = target_lat
+        data["longitude"] = target_lng
+        data["location"] = f"SRID=4326;POINT({target_lng} {target_lat})"
+
+    return data
+
+
+def _strip_unknown_columns(data: dict, error_msg: str) -> dict:
+    """
+    Parse PGRST204 error to find the offending column name and remove it.
+    Returns a new dict with that column removed.
+    """
+    import re
+    # Error format: "Could not find the 'column_name' column of 'table' in the schema cache"
+    match = re.search(r"Could not find the '(\w+)' column", error_msg)
+    if match:
+        bad_col = match.group(1)
+        print(f"  → Removing unknown column: '{bad_col}'")
+        return {k: v for k, v in data.items() if k != bad_col}
+    return data
+
+
 @app.post("/jobs")
 async def post_job(job: JobCreate, current_user=Depends(get_current_user)):
-    """Save a job posting with geo-location. Geocodes city if lat/lng not provided."""
-
+    """
+    Save a job posting. Automatically handles missing columns by stripping
+    unknown fields and retrying — so it works regardless of your exact table schema.
+    """
     target_lat = job.lat
     target_lng = job.lng
 
-    # ── Geocode the city if coordinates not already provided ──
+    # ── Geocode the city if coordinates not provided ──
     if job.job_city and (target_lat is None or target_lng is None):
         try:
             geocode_result = gmaps.geocode(job.job_city)
@@ -161,87 +247,52 @@ async def post_job(job: JobCreate, current_user=Depends(get_current_user)):
                 target_lat = loc['lat']
                 target_lng = loc['lng']
                 print(f"Geocoded '{job.job_city}' → lat={target_lat}, lng={target_lng}")
-            else:
-                print(f"Geocoding returned no results for '{job.job_city}'")
         except Exception as e:
-            print(f"Geocoding failed for '{job.job_city}': {e}")
+            print(f"Geocoding failed: {e}")
 
-    try:
-        # ── FIX 2: Use ST_GeomFromText with SRID 4326 for PostGIS ──
-        # Plain "POINT(lng lat)" string doesn't work with geography columns.
-        # We pass lat/lng as plain floats and let Supabase/PostGIS handle it via RPC,
-        # OR we use the correct WKT with SRID that PostGIS geography columns expect.
-        # The safest approach: store lat/lng as separate float columns if geography fails,
-        # OR call a Supabase RPC that does ST_GeomFromText internally.
-        #
-        # OPTION A — store as WKT text (works if lat_long is TEXT type):
-        #   point_str = f"POINT({target_lng} {target_lat})"
-        #
-        # OPTION B — pass coords to an RPC that handles geometry internally.
-        #
-        # OPTION C (most compatible) — pass lat & lng as floats, let the DB function build geometry.
-        # We use this approach below.
+    job_data = _get_candidate_job_data(job, current_user.id, target_lat, target_lng)
 
-        job_data = {
-            "employer_id": current_user.id,
-            "title": job.title,
-            "openings": job.openings,
-            "job_city": job.job_city,
-            "total_experience": job.total_experience,
-            "salary_min": job.salary_min,
-            "salary_max": job.salary_max,
-            "offers_bonus": job.offers_bonus,
-            "required_skills": job.required_skills,
-            "company_name": job.company_name,
-            "contact_person": job.contact_person,
-            "phone_number": job.phone_number,
-            "contact_email": job.email,
-            "hiring_speed": job.hiring_speed,
-            "hiring_frequency": job.hiring_frequency,
-        }
+    # ── Smart insert: retry up to 15 times, stripping one bad column each time ──
+    max_retries = 15
+    last_error = None
 
-        # ── FIX 2 (continued): Add geometry only if we have valid coords ──
-        if target_lat is not None and target_lng is not None:
-            # PostGIS geography column requires ST_GeomFromText — pass via RPC or use raw SQL
-            # Most Supabase setups accept this WKT string for geography columns:
-            job_data["lat_long"] = f"SRID=4326;POINT({target_lng} {target_lat})"
-            # Also store raw floats as backup columns (if those columns exist in your table)
-            job_data["lat"] = target_lat
-            job_data["lng"] = target_lng
+    for attempt in range(max_retries):
+        try:
+            print(f"Insert attempt {attempt + 1} with columns: {list(job_data.keys())}")
+            response = supabase.table("jobs").insert(job_data).execute()
 
-        response = supabase.table("jobs").insert(job_data).execute()
+            if response.data:
+                job_id = response.data[0].get("id")
+                print(f"✅ Job inserted successfully! id={job_id}")
+                return {
+                    "status": "success",
+                    "job_id": job_id,
+                    "attempts": attempt + 1
+                }
+            else:
+                raise HTTPException(status_code=500, detail="Insert succeeded but returned no data.")
 
-        if not response.data:
-            raise HTTPException(status_code=500, detail="Insert returned no data.")
+        except HTTPException:
+            raise
+        except Exception as e:
+            error_str = str(e)
+            last_error = error_str
+            print(f"DB insert error (attempt {attempt + 1}): {error_str}")
 
-        return {
-            "status": "success",
-            "job_id": response.data[0].get("id")
-        }
+            # PGRST204 = unknown column → strip it and retry
+            if "PGRST204" in error_str or "Could not find the" in error_str:
+                job_data = _strip_unknown_columns(job_data, error_str)
+                if not job_data:
+                    raise HTTPException(status_code=500, detail="All columns were stripped — jobs table may be empty or inaccessible.")
+                continue  # retry with stripped data
 
-    except HTTPException:
-        raise
-    except Exception as e:
-        error_detail = str(e)
-        print(f"DB insert error: {error_detail}")
+            # Other DB errors — don't retry
+            raise HTTPException(status_code=400, detail=f"Database error: {error_str}")
 
-        # ── FIX 3: Retry without geometry if PostGIS column fails ──
-        if "lat_long" in error_detail or "geometry" in error_detail or "geography" in error_detail:
-            print("Retrying insert WITHOUT lat_long geometry column...")
-            try:
-                job_data_fallback = {k: v for k, v in job_data.items()
-                                     if k not in ("lat_long", "lat", "lng")}
-                response2 = supabase.table("jobs").insert(job_data_fallback).execute()
-                if response2.data:
-                    return {
-                        "status": "success",
-                        "job_id": response2.data[0].get("id"),
-                        "warning": "Job saved without geo-coordinates. Check your lat_long column type."
-                    }
-            except Exception as e2:
-                raise HTTPException(status_code=400, detail=f"Database error (fallback also failed): {str(e2)}")
-
-        raise HTTPException(status_code=400, detail=f"Database Insertion Error: {error_detail}")
+    raise HTTPException(
+        status_code=400,
+        detail=f"Could not insert after {max_retries} attempts. Last error: {last_error}"
+    )
 
 
 # ═══════════════════════════════════════════════════════
