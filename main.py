@@ -52,29 +52,20 @@ class EmployerLogin(BaseModel):
     password: str
 
 class JobCreate(BaseModel):
-    # Basic Job Details
-    title: str = Field(..., alias="job_title") # Maps 'job_title' from UI to 'title' in DB
+    title: str = Field(..., alias="job_title") 
     openings: int = Field(..., gt=0)
-    job_city: str # This is used for geocoding if lat/lng are missing
-    
-    # Candidate Requirements
+    job_city: str 
     total_experience: str 
     salary_min: float
     salary_max: float
     offers_bonus: bool = False
     required_skills: List[str] = []
-    
-    # Company/Contact Details
     company_name: str
     contact_person: str
     phone_number: str 
     email: EmailStr
-    
-    # Hiring Metrics
     hiring_speed: str 
     hiring_frequency: str 
-    
-    # Location data from Frontend Map/Search
     lat: Optional[float] = None
     lng: Optional[float] = None
 
@@ -120,12 +111,9 @@ async def get_suggestions(q: str = Query(..., min_length=2)):
 @app.post("/jobs")
 async def post_job(job: JobCreate, current_user = Depends(get_current_user)):
     """Main logic for saving jobs with geo-location processing."""
-    
     target_lat = job.lat
     target_lng = job.lng
 
-    # --- Location Feature Logic ---
-    # If the UI didn't send coordinates, we use Google Geocoding on the 'job_city' string
     if job.job_city and (target_lat is None or target_lng is None):
         try:
             geocode_result = gmaps.geocode(job.job_city)
@@ -156,10 +144,37 @@ async def post_job(job: JobCreate, current_user = Depends(get_current_user)):
             "contact_email": job.email,
             "hiring_speed": job.hiring_speed,
             "hiring_frequency": job.hiring_frequency,
-            "lat_long": point_str # This column must be type 'geography' or 'geometry' in DB
+            "lat_long": point_str 
         }
         
         response = supabase.table("jobs").insert(job_data).execute()
         return {"status": "success", "job_id": response.data[0].get("id") if response.data else None}
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Database Insertion Error: {str(e)}")
+
+# --- New Geospatial Endpoint ---
+
+@app.get("/jobs/nearby")
+async def get_nearby_jobs(
+    lat: float = Query(..., description="User's current latitude"),
+    lng: float = Query(..., description="User's current longitude"),
+    radius: float = Query(50000.0, description="Search radius in meters (default 50km)")
+):
+    """
+    Calls the PostGIS 'get_jobs_nearby' function in Supabase to find nearby jobs.
+    """
+    try:
+        # Executes the RPC function defined in your SQL Editor
+        response = supabase.rpc("get_jobs_nearby", {
+            "user_lat": lat,
+            "user_lng": lng,
+            "radius_meters": radius
+        }).execute()
+
+        return {
+            "status": "success", 
+            "results_count": len(response.data) if response.data else 0,
+            "jobs": response.data if response.data else []
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Nearby search failed: {str(e)}")
