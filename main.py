@@ -1,4 +1,5 @@
 import os
+import re
 from typing import Optional, List
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query, Depends, status
@@ -10,19 +11,18 @@ import googlemaps
 
 load_dotenv()
 
-# --- Configuration ---
-SUPABASE_URL = os.environ.get("SUPABASE_URL")
+# ── Configuration ──────────────────────────────────────────────────────────────
+SUPABASE_URL         = os.environ.get("SUPABASE_URL")
 SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
-GOOGLE_MAPS_API_KEY = os.environ.get("GOOGLE_MAPS_API_KEY")
+GOOGLE_MAPS_API_KEY  = os.environ.get("GOOGLE_MAPS_API_KEY")
 
-# Initialize Clients
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-gmaps = googlemaps.Client(key=GOOGLE_MAPS_API_KEY)
-security = HTTPBearer()
+gmaps             = googlemaps.Client(key=GOOGLE_MAPS_API_KEY)
+security          = HTTPBearer()
 
-app = FastAPI(title="LaborGrow Professional Geo-Backend")
+app = FastAPI(title="LaborGrow API", version="2.0.0")
 
-# --- CORS ---
+# ── CORS ───────────────────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -31,8 +31,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- Authentication Dependency ---
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+# ── Auth dependency ────────────────────────────────────────────────────────────
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
     try:
         user_response = supabase.auth.get_user(credentials.credentials)
         if not user_response.user:
@@ -43,7 +45,8 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     except Exception as e:
         raise HTTPException(status_code=401, detail=f"Authentication failed: {str(e)}")
 
-# --- Pydantic Data Models ---
+
+# ── Models ─────────────────────────────────────────────────────────────────────
 class EmployerRegister(BaseModel):
     email: EmailStr
     password: str
@@ -72,265 +75,203 @@ class JobCreate(BaseModel):
     lng: Optional[float] = None
 
     class Config:
-        populate_by_name = True  # allows both 'title' and 'job_title'
+        populate_by_name = True   # accepts both "job_title" (alias) and "title"
 
 
-# ═══════════════════════════════════════════════════════
-# ENDPOINTS
-# ═══════════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════════════════
+# AUTH
+# ══════════════════════════════════════════════════════════════════════════════
 
 @app.post("/register")
 async def register_employer(user: EmployerRegister):
+    """
+    Register a new employer account.
+
+    FIXED vs v1:
+    - Returns access_token so the frontend (S.token = data.access_token)
+      has a valid token right after registration — without this, job
+      posting always failed with "You must be logged in" after register.
+    - Uses upsert on employers table so duplicate calls don't crash.
+    """
     try:
-        auth_response = supabase.auth.sign_up({
-            "email": user.email,
-            "password": user.password
+        auth_res = supabase.auth.sign_up({
+            "email":    user.email,
+            "password": user.password,
         })
 
-        if not auth_response.user:
+        if not auth_res.user:
             raise HTTPException(status_code=400, detail="Registration failed — no user returned.")
 
-        user_id = auth_response.user.id
+        user_id = auth_res.user.id
 
-        # ── FIX 1: upsert instead of insert so duplicate registrations don't crash ──
         supabase.table("employers").upsert({
-            "id": user_id,
+            "id":           user_id,
             "company_name": user.company_name,
-            "email": user.email
+            "email":        user.email,
         }).execute()
 
-        return {"message": "Registration successful", "user_id": user_id}
+        # If Supabase issued a session immediately (email confirm OFF) use it,
+        # otherwise do an auto sign-in to get a token.
+        access_token = None
+        if auth_res.session:
+            access_token = auth_res.session.access_token
+        else:
+            try:
+                login_res = supabase.auth.sign_in_with_password({
+                    "email":    user.email,
+                    "password": user.password,
+                })
+                if login_res.session:
+                    access_token = login_res.session.access_token
+            except Exception:
+                pass   # user can log in manually if this fails
+
+        return {
+            "message":      "Registration successful",
+            "user_id":      user_id,
+            "access_token": access_token,   # frontend reads data.access_token
+        }
 
     except HTTPException:
         raise
     except Exception as e:
-        error_msg = str(e)
-        # Supabase returns "User already registered" for duplicate emails
-        if "already registered" in error_msg.lower() or "already exists" in error_msg.lower():
+        msg = str(e)
+        if "already registered" in msg.lower() or "already exists" in msg.lower():
             raise HTTPException(
                 status_code=409,
-                detail="An account with this email already exists. Please log in instead."
+                detail="An account with this email already exists. Please log in instead.",
             )
-        raise HTTPException(status_code=400, detail=f"Registration error: {error_msg}")
+        raise HTTPException(status_code=400, detail=f"Registration error: {msg}")
 
 
 @app.post("/login")
 async def login_employer(credentials: EmployerLogin):
+    """Sign in and return an access_token."""
     try:
-        response = supabase.auth.sign_in_with_password({
-            "email": credentials.email,
-            "password": credentials.password
+        res = supabase.auth.sign_in_with_password({
+            "email":    credentials.email,
+            "password": credentials.password,
         })
-
-        if not response.session:
+        if not res.session:
             raise HTTPException(status_code=401, detail="Invalid email or password.")
-
-        return {
-            "access_token": response.session.access_token,
-            "user_id": response.user.id
-        }
+        return {"access_token": res.session.access_token, "user_id": res.user.id}
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=401, detail="Invalid email or password.")
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# LOCATION
+# ══════════════════════════════════════════════════════════════════════════════
+
 @app.get("/location/autocomplete")
-async def get_suggestions(q: str = Query(..., min_length=2)):
-    """City autocomplete via Google Places."""
+async def location_autocomplete(q: str = Query(..., min_length=2)):
+    """
+    Google Places city autocomplete.
+    Returns a list of prediction objects — frontend reads p.description from each.
+    Used by:
+      - Employer job post form (city field)
+      - Landing page hero search bar (city field, NEW)
+    """
     try:
-        predictions = gmaps.places_autocomplete(input_text=q, types='(cities)')
+        predictions = gmaps.places_autocomplete(input_text=q, types="(cities)")
         return predictions
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.get("/schema/jobs")
-async def get_jobs_schema():
-    """
-    Debug endpoint — returns the actual columns that exist in your 'jobs' table.
-    Visit /schema/jobs in your browser to see what columns Supabase has.
-    """
-    try:
-        # Fetch one row (even if empty) to inspect columns via PostgREST
-        result = supabase.table("jobs").select("*").limit(1).execute()
-        # PostgREST returns column names even for empty results via the schema
-        # We can also query information_schema directly
-        schema_result = supabase.rpc("get_jobs_columns", {}).execute()
-        return {"columns_via_rpc": schema_result.data}
-    except Exception:
-        pass
+# ══════════════════════════════════════════════════════════════════════════════
+# JOBS — READ
+# ══════════════════════════════════════════════════════════════════════════════
 
+@app.get("/jobs/search")
+async def search_jobs(
+    title:  Optional[str] = Query(None, description="Job title keyword"),
+    city:   Optional[str] = Query(None, description="City name"),
+    limit:  int           = Query(20, ge=1, le=100),
+    offset: int           = Query(0, ge=0),
+):
+    """
+    NEW — powers the landing page two-field search bar.
+
+    GET /jobs/search?title=electrician&city=Mumbai
+
+    Both params are optional and case-insensitive partial matches.
+    Returns jobs ordered newest-first in the same shape as /jobs/nearby
+    so the same frontend renderJobs() function works for both.
+    """
     try:
-        # Fallback: query information_schema directly
-        result = supabase.from_("information_schema.columns").select(
-            "column_name, data_type, is_nullable"
-        ).eq("table_name", "jobs").eq("table_schema", "public").execute()
-        return {"columns": result.data}
+        q = (
+            supabase.table("jobs")
+            .select(
+                "id, title, company_name, job_city, total_experience, "
+                "salary_min, salary_max, offers_bonus, openings, "
+                "required_skills, hiring_speed, created_at"
+            )
+            .order("created_at", desc=True)
+        )
+
+        if title and title.strip():
+            q = q.ilike("title", f"%{title.strip()}%")
+
+        if city and city.strip():
+            q = q.ilike("job_city", f"%{city.strip()}%")
+
+        result = q.range(offset, offset + limit - 1).execute()
+        jobs   = result.data or []
+
+        return {
+            "status": "success",
+            "count":  len(jobs),
+            "query":  {"title": title, "city": city},
+            "jobs":   jobs,
+        }
     except Exception as e:
-        return {"error": str(e), "tip": "Run a SELECT * FROM jobs LIMIT 1 in your Supabase SQL editor to see columns."}
+        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
 
-
-# Cache of known-good columns (populated on first successful insert)
-_known_jobs_columns: set = set()
-
-
-def _get_candidate_job_data(job: "JobCreate", employer_id: str, target_lat, target_lng) -> dict:
-    """
-    Build the maximal job_data dict with ALL possible column names.
-    We'll strip unknown columns before inserting.
-    """
-    data = {
-        # Core columns — almost certainly exist
-        "employer_id": employer_id,
-        "title": job.title,
-        "openings": job.openings,
-        "job_city": job.job_city,
-        "total_experience": job.total_experience,
-        "salary_min": job.salary_min,
-        "salary_max": job.salary_max,
-        "offers_bonus": job.offers_bonus,
-        "required_skills": job.required_skills,
-
-        # Contact / company columns — may or may not exist
-        "company_name": job.company_name,
-        "contact_person": job.contact_person,
-        "phone_number": job.phone_number,
-        "contact_email": job.email,
-        "email": job.email,              # alternate column name
-        "hiring_speed": job.hiring_speed,
-        "hiring_frequency": job.hiring_frequency,
-    }
-
-    # Geometry column — try multiple formats
-    if target_lat is not None and target_lng is not None:
-        data["lat_long"] = f"SRID=4326;POINT({target_lng} {target_lat})"
-        data["lat"] = target_lat
-        data["lng"] = target_lng
-        data["latitude"] = target_lat
-        data["longitude"] = target_lng
-        data["location"] = f"SRID=4326;POINT({target_lng} {target_lat})"
-
-    return data
-
-
-def _strip_unknown_columns(data: dict, error_msg: str) -> dict:
-    """
-    Parse PGRST204 error to find the offending column name and remove it.
-    Returns a new dict with that column removed.
-    """
-    import re
-    # Error format: "Could not find the 'column_name' column of 'table' in the schema cache"
-    match = re.search(r"Could not find the '(\w+)' column", error_msg)
-    if match:
-        bad_col = match.group(1)
-        print(f"  → Removing unknown column: '{bad_col}'")
-        return {k: v for k, v in data.items() if k != bad_col}
-    return data
-
-
-@app.post("/jobs")
-async def post_job(job: JobCreate, current_user=Depends(get_current_user)):
-    """
-    Save a job posting. Automatically handles missing columns by stripping
-    unknown fields and retrying — so it works regardless of your exact table schema.
-    """
-    target_lat = job.lat
-    target_lng = job.lng
-
-    # ── Geocode the city if coordinates not provided ──
-    if job.job_city and (target_lat is None or target_lng is None):
-        try:
-            geocode_result = gmaps.geocode(job.job_city)
-            if geocode_result:
-                loc = geocode_result[0]['geometry']['location']
-                target_lat = loc['lat']
-                target_lng = loc['lng']
-                print(f"Geocoded '{job.job_city}' → lat={target_lat}, lng={target_lng}")
-        except Exception as e:
-            print(f"Geocoding failed: {e}")
-
-    job_data = _get_candidate_job_data(job, current_user.id, target_lat, target_lng)
-
-    # ── Smart insert: retry up to 15 times, stripping one bad column each time ──
-    max_retries = 15
-    last_error = None
-
-    for attempt in range(max_retries):
-        try:
-            print(f"Insert attempt {attempt + 1} with columns: {list(job_data.keys())}")
-            response = supabase.table("jobs").insert(job_data).execute()
-
-            if response.data:
-                job_id = response.data[0].get("id")
-                print(f"✅ Job inserted successfully! id={job_id}")
-                return {
-                    "status": "success",
-                    "job_id": job_id,
-                    "attempts": attempt + 1
-                }
-            else:
-                raise HTTPException(status_code=500, detail="Insert succeeded but returned no data.")
-
-        except HTTPException:
-            raise
-        except Exception as e:
-            error_str = str(e)
-            last_error = error_str
-            print(f"DB insert error (attempt {attempt + 1}): {error_str}")
-
-            # PGRST204 = unknown column → strip it and retry
-            if "PGRST204" in error_str or "Could not find the" in error_str:
-                job_data = _strip_unknown_columns(job_data, error_str)
-                if not job_data:
-                    raise HTTPException(status_code=500, detail="All columns were stripped — jobs table may be empty or inaccessible.")
-                continue  # retry with stripped data
-
-            # Other DB errors — don't retry
-            raise HTTPException(status_code=400, detail=f"Database error: {error_str}")
-
-    raise HTTPException(
-        status_code=400,
-        detail=f"Could not insert after {max_retries} attempts. Last error: {last_error}"
-    )
-
-
-# ═══════════════════════════════════════════════════════
-# GEOSPATIAL — Nearby Jobs
-# ═══════════════════════════════════════════════════════
 
 @app.get("/jobs/nearby")
 async def get_nearby_jobs(
-    lat: float = Query(..., description="User's latitude"),
-    lng: float = Query(..., description="User's longitude"),
-    radius: float = Query(50000.0, description="Search radius in meters (default 50km)")
+    lat:    float         = Query(..., description="User latitude"),
+    lng:    float         = Query(..., description="User longitude"),
+    radius: float         = Query(50000.0, description="Radius in metres (default 50 km)"),
+    title:  Optional[str] = Query(None,    description="Optional job title keyword filter"),
 ):
     """
-    Calls the PostGIS 'get_jobs_nearby' RPC function in Supabase.
+    Geospatial search via PostGIS RPC.
 
-    Required SQL in Supabase (run in SQL Editor if not already created):
+    UPDATED vs v1: now accepts optional ?title= so the landing page can
+    filter by title + location in one call.
+
+    Three-level fallback:
+      1. RPC with title_filter param  (updated SQL function)
+      2. RPC without title_filter     (old SQL function) + Python filter
+      3. Plain table query            (no PostGIS / no RPC at all)
+
+    Updated SQL to run in Supabase SQL Editor:
 
         CREATE OR REPLACE FUNCTION get_jobs_nearby(
-            user_lat float,
-            user_lng float,
-            radius_meters float DEFAULT 50000
+            user_lat      float,
+            user_lng      float,
+            radius_meters float DEFAULT 50000,
+            title_filter  text  DEFAULT NULL
         )
         RETURNS TABLE (
-            id uuid,
-            title text,
-            company_name text,
-            job_city text,
+            id               uuid,
+            title            text,
+            company_name     text,
+            job_city         text,
             total_experience text,
-            salary_min float,
-            salary_max float,
-            offers_bonus boolean,
-            openings int,
-            required_skills text[],
-            hiring_speed text,
-            distance_meters float
+            salary_min       float,
+            salary_max       float,
+            offers_bonus     boolean,
+            openings         int,
+            required_skills  text[],
+            hiring_speed     text,
+            distance_meters  float
         )
-        LANGUAGE sql
-        AS $$
+        LANGUAGE sql AS $$
             SELECT
                 id, title, company_name, job_city, total_experience,
                 salary_min, salary_max, offers_bonus, openings,
@@ -341,48 +282,268 @@ async def get_nearby_jobs(
                 ) AS distance_meters
             FROM jobs
             WHERE ST_DWithin(
-                lat_long::geography,
-                ST_SetSRID(ST_MakePoint(user_lng, user_lat), 4326)::geography,
-                radius_meters
-            )
+                    lat_long::geography,
+                    ST_SetSRID(ST_MakePoint(user_lng, user_lat), 4326)::geography,
+                    radius_meters
+                  )
+              AND (title_filter IS NULL OR title ILIKE ('%' || title_filter || '%'))
             ORDER BY distance_meters ASC;
         $$;
     """
+    rpc_params: dict = {
+        "user_lat":      lat,
+        "user_lng":      lng,
+        "radius_meters": radius,
+    }
+    if title:
+        rpc_params["title_filter"] = title.strip()
+
+    # Level 1: RPC with title_filter
     try:
-        response = supabase.rpc("get_jobs_nearby", {
-            "user_lat": lat,
-            "user_lng": lng,
-            "radius_meters": radius
-        }).execute()
+        res  = supabase.rpc("get_jobs_nearby", rpc_params).execute()
+        jobs = res.data or []
+        return {"status": "success", "results_count": len(jobs), "jobs": jobs}
+    except Exception as e:
+        print(f"[nearby] level-1 error: {e}")
 
-        jobs = response.data if response.data else []
+    # Level 2: RPC without title_filter (old SQL), filter in Python
+    if title:
+        try:
+            res  = supabase.rpc("get_jobs_nearby", {
+                "user_lat": lat, "user_lng": lng, "radius_meters": radius
+            }).execute()
+            jobs = [j for j in (res.data or [])
+                    if title.lower() in (j.get("title") or "").lower()]
+            return {"status": "success", "results_count": len(jobs), "jobs": jobs}
+        except Exception as e:
+            print(f"[nearby] level-2 error: {e}")
 
+    # Level 3: Plain table query (no PostGIS)
+    try:
+        print("[nearby] RPC unavailable — plain table fallback")
+        q = (
+            supabase.table("jobs")
+            .select(
+                "id, title, company_name, job_city, total_experience, "
+                "salary_min, salary_max, offers_bonus, openings, "
+                "required_skills, hiring_speed"
+            )
+        )
+        if title:
+            q = q.ilike("title", f"%{title.strip()}%")
+
+        fb = q.limit(20).execute()
         return {
-            "status": "success",
-            "results_count": len(jobs),
-            "jobs": jobs
+            "status":        "success",
+            "results_count": len(fb.data or []),
+            "jobs":          fb.data or [],
+            "warning":       (
+                "get_jobs_nearby RPC not found — showing results without "
+                "distance sort. See /jobs/nearby docstring to create it."
+            ),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"All fallbacks failed: {str(e)}")
+
+
+@app.get("/jobs")
+async def list_jobs(
+    limit:  int           = Query(20, ge=1, le=100),
+    offset: int           = Query(0, ge=0),
+    city:   Optional[str] = Query(None, description="Filter by city"),
+):
+    """
+    NEW — paginated list of all jobs, newest first.
+    Powers the landing page "Browse all jobs →" link.
+    """
+    try:
+        q = (
+            supabase.table("jobs")
+            .select(
+                "id, title, company_name, job_city, total_experience, "
+                "salary_min, salary_max, offers_bonus, openings, "
+                "required_skills, hiring_speed, created_at"
+            )
+            .order("created_at", desc=True)
+        )
+        if city:
+            q = q.ilike("job_city", f"%{city}%")
+
+        result = q.range(offset, offset + limit - 1).execute()
+        jobs   = result.data or []
+        return {"status": "success", "count": len(jobs), "jobs": jobs}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch jobs: {str(e)}")
+
+
+@app.get("/jobs/{job_id}")
+async def get_job(job_id: str):
+    """
+    NEW — fetch a single job by its UUID.
+    Used when a candidate clicks a job card to view full details.
+    """
+    try:
+        result = (
+            supabase.table("jobs")
+            .select("*")
+            .eq("id", job_id)
+            .single()
+            .execute()
+        )
+        if not result.data:
+            raise HTTPException(status_code=404, detail="Job not found.")
+        return result.data
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# JOBS — WRITE
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.post("/jobs", status_code=201)
+async def post_job(job: JobCreate, current_user=Depends(get_current_user)):
+    """
+    Create a job posting (requires Bearer token from /login or /register).
+
+    Accepts the exact payload the frontend sends:
+        job_title, openings, job_city, total_experience,
+        salary_min, salary_max, offers_bonus, required_skills,
+        company_name, contact_person, phone_number, email,
+        hiring_speed, hiring_frequency
+
+    Geocodes job_city → lat/lng via Google Maps automatically.
+    Strips unknown columns and retries up to 15 times — works regardless
+    of your exact Supabase table schema.
+    """
+    target_lat = job.lat
+    target_lng = job.lng
+
+    if job.job_city and (target_lat is None or target_lng is None):
+        try:
+            geo = gmaps.geocode(job.job_city)
+            if geo:
+                loc        = geo[0]["geometry"]["location"]
+                target_lat = loc["lat"]
+                target_lng = loc["lng"]
+                print(f"Geocoded '{job.job_city}' → {target_lat}, {target_lng}")
+        except Exception as e:
+            print(f"Geocoding failed: {e}")
+
+    job_data   = _build_job_data(job, current_user.id, target_lat, target_lng)
+    last_error = None
+
+    for attempt in range(15):
+        try:
+            print(f"Insert attempt {attempt + 1} | cols: {list(job_data.keys())}")
+            res = supabase.table("jobs").insert(job_data).execute()
+
+            if res.data:
+                job_id = res.data[0].get("id")
+                print(f"✅ Job inserted — id={job_id}")
+                return {"status": "success", "job_id": job_id, "attempts": attempt + 1}
+
+            raise HTTPException(status_code=500, detail="Insert returned no data.")
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            err        = str(e)
+            last_error = err
+            print(f"DB error (attempt {attempt + 1}): {err}")
+
+            if "PGRST204" in err or "Could not find the" in err:
+                job_data = _strip_unknown_column(job_data, err)
+                if not job_data:
+                    raise HTTPException(
+                        status_code=500,
+                        detail="All columns stripped — check jobs table schema."
+                    )
+                continue
+
+            raise HTTPException(status_code=400, detail=f"Database error: {err}")
+
+    raise HTTPException(
+        status_code=400,
+        detail=f"Insert failed after 15 attempts. Last error: {last_error}",
+    )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# DEBUG / HEALTH
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.get("/schema/jobs")
+async def jobs_schema():
+    """Debug: returns columns present in the jobs table."""
+    try:
+        result = (
+            supabase
+            .from_("information_schema.columns")
+            .select("column_name, data_type, is_nullable")
+            .eq("table_name",   "jobs")
+            .eq("table_schema", "public")
+            .execute()
+        )
+        return {"columns": result.data}
+    except Exception as e:
+        return {
+            "error": str(e),
+            "tip":   "Run: SELECT column_name FROM information_schema.columns "
+                     "WHERE table_name='jobs' in your Supabase SQL editor.",
         }
 
-    except Exception as e:
-        error_msg = str(e)
-        print(f"Nearby search error: {error_msg}")
 
-        # ── FIX 4: Fallback — if RPC doesn't exist, do a plain table query ──
-        if "function" in error_msg.lower() or "rpc" in error_msg.lower() or "does not exist" in error_msg.lower():
-            try:
-                print("RPC not found — falling back to plain table query (no distance filtering)")
-                fallback = supabase.table("jobs").select(
-                    "id, title, company_name, job_city, total_experience, "
-                    "salary_min, salary_max, offers_bonus, openings, required_skills, hiring_speed"
-                ).limit(20).execute()
+@app.get("/health")
+async def health():
+    return {"status": "ok", "service": "LaborGrow API", "version": "2.0.0"}
 
-                return {
-                    "status": "success",
-                    "results_count": len(fallback.data or []),
-                    "jobs": fallback.data or [],
-                    "warning": "get_jobs_nearby RPC not found. Showing all jobs. See backend docs to create the SQL function."
-                }
-            except Exception as e2:
-                raise HTTPException(status_code=500, detail=f"Fallback query also failed: {str(e2)}")
 
-        raise HTTPException(status_code=500, detail=f"Nearby search failed: {error_msg}")
+# ══════════════════════════════════════════════════════════════════════════════
+# HELPERS
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _build_job_data(job: JobCreate, employer_id: str, lat, lng) -> dict:
+    """
+    Build the maximal column dict. Unknown columns are stripped one-by-one
+    on retries until the insert succeeds.
+    """
+    data: dict = {
+        "employer_id":      employer_id,
+        "title":            job.title,
+        "openings":         job.openings,
+        "job_city":         job.job_city,
+        "total_experience": job.total_experience,
+        "salary_min":       job.salary_min,
+        "salary_max":       job.salary_max,
+        "offers_bonus":     job.offers_bonus,
+        "required_skills":  job.required_skills,
+        "company_name":     job.company_name,
+        "contact_person":   job.contact_person,
+        "phone_number":     job.phone_number,
+        "contact_email":    job.email,
+        "email":            job.email,
+        "hiring_speed":     job.hiring_speed,
+        "hiring_frequency": job.hiring_frequency,
+    }
+    if lat is not None and lng is not None:
+        wkt               = f"SRID=4326;POINT({lng} {lat})"
+        data["lat_long"]  = wkt
+        data["lat"]       = lat
+        data["lng"]       = lng
+        data["latitude"]  = lat
+        data["longitude"] = lng
+        data["location"]  = wkt
+    return data
+
+
+def _strip_unknown_column(data: dict, error_msg: str) -> dict:
+    """Remove the column named in a PGRST204 error and return the slimmed dict."""
+    m = re.search(r"Could not find the '(\w+)' column", error_msg)
+    if m:
+        bad = m.group(1)
+        print(f"  → Stripping unknown column '{bad}'")
+        return {k: v for k, v in data.items() if k != bad}
+    return data
