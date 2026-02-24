@@ -47,14 +47,23 @@ async def get_current_user(
 
 
 # ── Models ─────────────────────────────────────────────────────────────────────
-class EmployerRegister(BaseModel):
+class UserRegister(BaseModel):
     email: EmailStr
     password: str
-    company_name: str
+    role: str = Field(..., pattern="^(employer|employee)$", description="'employer' or 'employee'")
+    # Employer-specific (required when role=employer)
+    company_name: Optional[str] = None
+    # Employee-specific (optional)
+    full_name: Optional[str] = None
+    phone: Optional[str] = None
 
-class EmployerLogin(BaseModel):
+class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
+# Keep old name as alias so any other internal references don't break
+EmployerRegister = UserRegister
+EmployerLogin    = UserLogin
 
 class JobCreate(BaseModel):
     title: str = Field(..., alias="job_title")
@@ -90,16 +99,27 @@ class JobApply(BaseModel):
 # ══════════════════════════════════════════════════════════════════════════════
 
 @app.post("/register")
-async def register_employer(user: EmployerRegister):
+async def register_user(user: UserRegister):
     """
-    Register a new employer account.
+    Register a new account — works for both employers and employees.
 
-    FIXED vs v1:
-    - Returns access_token so the frontend (S.token = data.access_token)
-      has a valid token right after registration — without this, job
-      posting always failed with "You must be logged in" after register.
-    - Uses upsert on employers table so duplicate calls don't crash.
+    Payload:
+        email       – required
+        password    – required
+        role        – "employer" or "employee"  ← NEW unified field
+        company_name – required when role=employer
+        full_name   – optional (employee profile)
+        phone       – optional (employee profile)
+
+    Returns access_token so the frontend can post jobs / apply immediately
+    after registration without a separate /login call.
     """
+    if user.role == "employer" and not user.company_name:
+        raise HTTPException(
+            status_code=422,
+            detail="company_name is required when role is 'employer'.",
+        )
+
     try:
         auth_res = supabase.auth.sign_up({
             "email":    user.email,
@@ -111,11 +131,20 @@ async def register_employer(user: EmployerRegister):
 
         user_id = auth_res.user.id
 
-        supabase.table("employers").upsert({
-            "id":           user_id,
-            "company_name": user.company_name,
-            "email":        user.email,
-        }).execute()
+        # Insert into the appropriate profile table based on role
+        if user.role == "employer":
+            supabase.table("employers").upsert({
+                "id":           user_id,
+                "company_name": user.company_name,
+                "email":        user.email,
+            }).execute()
+        else:  # employee
+            profile: dict = {"id": user_id, "email": user.email}
+            if user.full_name:
+                profile["full_name"] = user.full_name
+            if user.phone:
+                profile["phone"] = user.phone
+            supabase.table("employees").upsert(profile).execute()
 
         # If Supabase issued a session immediately (email confirm OFF) use it,
         # otherwise do an auto sign-in to get a token.
@@ -136,7 +165,8 @@ async def register_employer(user: EmployerRegister):
         return {
             "message":      "Registration successful",
             "user_id":      user_id,
-            "access_token": access_token,   # frontend reads data.access_token
+            "role":         user.role,
+            "access_token": access_token,
         }
 
     except HTTPException:
@@ -152,8 +182,11 @@ async def register_employer(user: EmployerRegister):
 
 
 @app.post("/login")
-async def login_employer(credentials: EmployerLogin):
-    """Sign in and return an access_token."""
+async def login_user(credentials: UserLogin):
+    """
+    Sign in — works for both employers and employees.
+    Returns access_token + user_id + role.
+    """
     try:
         res = supabase.auth.sign_in_with_password({
             "email":    credentials.email,
@@ -161,7 +194,29 @@ async def login_employer(credentials: EmployerLogin):
         })
         if not res.session:
             raise HTTPException(status_code=401, detail="Invalid email or password.")
-        return {"access_token": res.session.access_token, "user_id": res.user.id}
+
+        user_id = res.user.id
+
+        # Determine role by checking which profile table has this user
+        role = "employee"  # default
+        try:
+            emp = (
+                supabase.table("employers")
+                .select("id")
+                .eq("id", user_id)
+                .maybe_single()
+                .execute()
+            )
+            if emp.data:
+                role = "employer"
+        except Exception:
+            pass  # if check fails, fall back to "employee"
+
+        return {
+            "access_token": res.session.access_token,
+            "user_id":      user_id,
+            "role":         role,
+        }
     except HTTPException:
         raise
     except Exception:
