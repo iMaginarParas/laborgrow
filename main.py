@@ -20,7 +20,7 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 gmaps             = googlemaps.Client(key=GOOGLE_MAPS_API_KEY)
 security          = HTTPBearer()
 
-app = FastAPI(title="LaborGrow API", version="2.0.0")
+app = FastAPI(title="LaborGrow API", version="2.1.0")
 
 # ── CORS ───────────────────────────────────────────────────────────────────────
 app.add_middleware(
@@ -76,6 +76,13 @@ class JobCreate(BaseModel):
 
     class Config:
         populate_by_name = True   # accepts both "job_title" (alias) and "title"
+
+
+class JobApply(BaseModel):
+    full_name:   str
+    email:       EmailStr
+    phone:       str
+    cover_note:  Optional[str] = None   # optional short message from candidate
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -400,8 +407,154 @@ async def get_job(job_id: str):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# JOBS — WRITE
+# APPLICATIONS
 # ══════════════════════════════════════════════════════════════════════════════
+
+@app.post("/jobs/{job_id}/apply", status_code=201)
+async def apply_to_job(job_id: str, application: JobApply):
+    """
+    Submit a job application (no login required — candidates are not registered users).
+
+    Payload:
+        full_name   – candidate's name
+        email       – candidate's email
+        phone       – candidate's phone number
+        cover_note  – optional short message (max ~500 chars recommended)
+
+    Creates a row in the `job_applications` table.
+
+    Required Supabase table (run once in SQL editor):
+
+        CREATE TABLE IF NOT EXISTS job_applications (
+            id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+            job_id      uuid NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+            full_name   text NOT NULL,
+            email       text NOT NULL,
+            phone       text NOT NULL,
+            cover_note  text,
+            applied_at  timestamptz NOT NULL DEFAULT now()
+        );
+
+        -- Allow anyone to insert (candidates are anonymous)
+        ALTER TABLE job_applications ENABLE ROW LEVEL SECURITY;
+        CREATE POLICY "Anyone can apply" ON job_applications FOR INSERT WITH CHECK (true);
+
+        -- Only the job's employer can read applications (enforced in API, not RLS here)
+    """
+    # Verify the job exists first
+    try:
+        job_res = (
+            supabase.table("jobs")
+            .select("id, employer_id")
+            .eq("id", job_id)
+            .single()
+            .execute()
+        )
+        if not job_res.data:
+            raise HTTPException(status_code=404, detail="Job not found.")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=404, detail="Job not found.")
+
+    # Prevent duplicate applications from same email
+    try:
+        dup = (
+            supabase.table("job_applications")
+            .select("id")
+            .eq("job_id", job_id)
+            .eq("email", application.email)
+            .execute()
+        )
+        if dup.data:
+            raise HTTPException(
+                status_code=409,
+                detail="You have already applied to this job with this email address.",
+            )
+    except HTTPException:
+        raise
+    except Exception:
+        pass  # If duplicate check fails, still allow the insert
+
+    try:
+        res = (
+            supabase.table("job_applications")
+            .insert({
+                "job_id":     job_id,
+                "full_name":  application.full_name,
+                "email":      application.email,
+                "phone":      application.phone,
+                "cover_note": application.cover_note,
+            })
+            .execute()
+        )
+        if not res.data:
+            raise HTTPException(status_code=500, detail="Application submission failed.")
+
+        return {
+            "status":         "success",
+            "message":        "Application submitted successfully.",
+            "application_id": res.data[0].get("id"),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to submit application: {str(e)}")
+
+
+@app.get("/jobs/{job_id}/applicants")
+async def get_job_applicants(job_id: str, current_user=Depends(get_current_user)):
+    """
+    Returns all applicants for a job — name, email, phone, cover_note, applied_at.
+    Only accessible by the employer who posted the job.
+
+    GET /jobs/{job_id}/applicants
+    Authorization: Bearer <token>
+    """
+    # Fetch job and verify ownership
+    try:
+        job_res = (
+            supabase.table("jobs")
+            .select("id, employer_id, title, company_name")
+            .eq("id", job_id)
+            .single()
+            .execute()
+        )
+        if not job_res.data:
+            raise HTTPException(status_code=404, detail="Job not found.")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=404, detail="Job not found.")
+
+    job = job_res.data
+    if job["employer_id"] != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied — you can only view applicants for your own job postings.",
+        )
+
+    # Fetch applicants
+    try:
+        apps_res = (
+            supabase.table("job_applications")
+            .select("id, full_name, email, phone, cover_note, applied_at")
+            .eq("job_id", job_id)
+            .order("applied_at", desc=True)
+            .execute()
+        )
+        applicants = apps_res.data or []
+
+        return {
+            "status":          "success",
+            "job_id":          job_id,
+            "job_title":       job["title"],
+            "company_name":    job["company_name"],
+            "total_applicants": len(applicants),
+            "applicants":      applicants,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch applicants: {str(e)}")
 
 @app.post("/jobs", status_code=201)
 async def post_job(job: JobCreate, current_user=Depends(get_current_user)):
@@ -498,7 +651,7 @@ async def jobs_schema():
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "LaborGrow API", "version": "2.0.0"}
+    return {"status": "ok", "service": "LaborGrow API", "version": "2.1.0"}
 
 
 # ══════════════════════════════════════════════════════════════════════════════
