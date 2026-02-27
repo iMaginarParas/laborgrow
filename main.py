@@ -22,7 +22,7 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 gmaps             = googlemaps.Client(key=GOOGLE_MAPS_API_KEY)
 security          = HTTPBearer()
 
-app = FastAPI(title="LaborGrow API", version="2.2.0")
+app = FastAPI(title="LaborGrow API", version="2.3.0")
 
 # ── CORS ───────────────────────────────────────────────────────────────────────
 app.add_middleware(
@@ -32,6 +32,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ── Mount admin router ─────────────────────────────────────────────────────────
+from admin import admin_router
+app.include_router(admin_router)
+
 
 # ── Auth dependency ────────────────────────────────────────────────────────────
 async def get_current_user(
@@ -282,8 +287,12 @@ async def get_nearby_jobs(
         if title:
             q = q.ilike("title", f"%{title.strip()}%")
         fb = q.limit(20).execute()
-        return {"status": "success", "results_count": len(fb.data or []), "jobs": fb.data or [],
-                "warning": "PostGIS RPC unavailable — showing results without distance sort."}
+        return {
+            "status":       "success",
+            "results_count": len(fb.data or []),
+            "jobs":          fb.data or [],
+            "warning":       "PostGIS RPC unavailable — showing results without distance sort.",
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"All fallbacks failed: {str(e)}")
 
@@ -296,8 +305,7 @@ async def list_jobs(
 ):
     """
     Public paginated job list, newest first.
-    FIX: Now includes employer_id in the response so the frontend
-    can filter My Jobs client-side without a separate endpoint.
+    Includes employer_id so the frontend can filter My Jobs client-side.
     """
     try:
         q = (
@@ -320,7 +328,7 @@ async def list_jobs(
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# MY JOBS  ← NEW: returns only the authenticated employer's own postings
+# MY JOBS — authenticated employer's own postings
 # ══════════════════════════════════════════════════════════════════════════════
 
 @app.get("/my-jobs")
@@ -331,7 +339,6 @@ async def get_my_jobs(
 ):
     """
     Returns ONLY the jobs posted by the authenticated employer.
-    Filters server-side by employer_id = current_user.id.
 
     GET /my-jobs
     Authorization: Bearer <token>
@@ -384,12 +391,8 @@ async def apply_to_job(job_id: str, application: JobApply):
     """
     Submit a job application. No login required.
 
-    FIX for RLS error (42501): The supabase client here uses the SERVICE ROLE
-    key, which bypasses Supabase RLS entirely. The previous error was likely
-    caused by a misconfigured RLS policy. With the service key this insert
-    will always succeed regardless of RLS rules on job_applications.
-
-    If you want extra safety, run this in Supabase SQL Editor:
+    The supabase client uses the SERVICE ROLE key, which bypasses RLS entirely.
+    If you want extra safety, run in Supabase SQL Editor:
         ALTER TABLE job_applications DISABLE ROW LEVEL SECURITY;
     Or add a permissive INSERT policy:
         CREATE POLICY "allow_all_inserts" ON job_applications
@@ -594,7 +597,7 @@ async def jobs_schema():
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "LaborGrow API", "version": "2.2.0"}
+    return {"status": "ok", "service": "LaborGrow API", "version": "2.3.0"}
 
 
 # ══════════════════════════════════════════════════════════════════════════════
