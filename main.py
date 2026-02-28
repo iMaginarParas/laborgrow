@@ -90,7 +90,8 @@ async def get_worker_public(worker_id: str):
 
 @app.get("/jobs/search")
 async def search_jobs(location: Optional[str] = None, title: Optional[str] = None):
-    query = supabase.table("jobs").select("id, title, location, budget, created_by")
+    # Fixed: Changed 'created_by' to 'employer_id' in the select string
+    query = supabase.table("jobs").select("id, title, location, budget, employer_id")
     if location: query = query.ilike("location", f"%{location}%")
     if title: query = query.ilike("title", f"%{title}%")
     res = query.execute()
@@ -111,7 +112,8 @@ async def upsert_profile(body: WorkerProfileUpdate, current_user=Depends(get_cur
 @app.post("/jobs")
 async def create_job(body: JobCreate, current_user=Depends(get_current_user)):
     job_data = body.model_dump()
-    job_data["created_by"] = current_user.id
+    # Fixed: Changed the dictionary key to match the database column
+    job_data["employer_id"] = current_user.id
     try:
         res = supabase.table("jobs").insert(job_data).execute()
         return {"status": "success", "data": res.data}
