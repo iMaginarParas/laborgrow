@@ -35,7 +35,6 @@ app.add_middleware(
 from admin import admin_router
 app.include_router(admin_router)
 
-
 # ── Auth dependency ────────────────────────────────────────────────────────────
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
@@ -49,7 +48,6 @@ async def get_current_user(
         raise
     except Exception as e:
         raise HTTPException(status_code=401, detail=f"Authentication failed: {str(e)}")
-
 
 # ── Models ─────────────────────────────────────────────────────────────────────
 class UserRegister(BaseModel):
@@ -101,7 +99,6 @@ class JobApply(BaseModel):
     phone:      str
     cover_note: Optional[str] = None
 
-
 # ══════════════════════════════════════════════════════════════════════════════
 # AUTH
 # ══════════════════════════════════════════════════════════════════════════════
@@ -109,18 +106,15 @@ class JobApply(BaseModel):
 @app.post("/register")
 async def register_user(user: UserRegister):
     if user.role == "employer" and not user.company_name:
-        raise HTTPException(status_code=422, detail="company_name required for employers.")
+        raise HTTPException(status_code=422, detail="company_name is required for employers.")
     try:
         auth_res = supabase.auth.sign_up({"email": user.email, "password": user.password})
-        if not auth_res.user: raise HTTPException(status_code=400, detail="Reg failed.")
-        
+        if not auth_res.user: raise HTTPException(status_code=400, detail="Registration failed.")
         user_id = auth_res.user.id
         if user.role == "employer":
             supabase.table("employers").upsert({"id": user_id, "company_name": user.company_name, "email": user.email}).execute()
         else:
-            profile = {"id": user_id, "email": user.email, "full_name": user.full_name, "phone": user.phone}
-            supabase.table("employees").upsert(profile).execute()
-
+            supabase.table("employees").upsert({"id": user_id, "email": user.email, "full_name": user.full_name, "phone": user.phone}).execute()
         return {"message": "Success", "user_id": user_id, "role": user.role}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -150,7 +144,7 @@ async def update_my_profile(body: EmployeeProfileUpdate, current_user=Depends(ge
     return {"status": "success", "updated": res.data[0]}
 
 # ══════════════════════════════════════════════════════════════════════════════
-# JOBS & APPLICATIONS (Original logic preserved)
+# JOBS — READ (Public)
 # ══════════════════════════════════════════════════════════════════════════════
 
 @app.get("/jobs/search")
@@ -158,21 +152,29 @@ async def search_jobs(title: Optional[str] = None, city: Optional[str] = None):
     q = supabase.table("jobs").select("*").order("created_at", desc=True)
     if title: q = q.ilike("title", f"%{title}%")
     if city: q = q.ilike("job_city", f"%{city}%")
-    return {"jobs": q.execute().data}
+    return {"status": "success", "jobs": q.execute().data}
 
-@app.post("/jobs/{job_id}/apply")
-async def apply_to_job(job_id: str, application: JobApply):
-    data = {"job_id": job_id, **application.model_dump()}
+# ══════════════════════════════════════════════════════════════════════════════
+# APPLICATIONS (Requires Auth)
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.post("/jobs/{job_id}/apply", status_code=201)
+async def apply_to_job(job_id: str, application: JobApply, current_user=Depends(get_current_user)):
+    """Authenticated application submission."""
+    data = {"job_id": job_id, **application.model_dump(), "employee_id": current_user.id}
     res = supabase.table("job_applications").insert(data).execute()
-    return {"status": "success"}
+    return {"status": "success", "message": "Application submitted."}
+
+# ══════════════════════════════════════════════════════════════════════════════
+# JOB MANAGEMENT (Authenticated)
+# ══════════════════════════════════════════════════════════════════════════════
 
 @app.post("/jobs", status_code=201)
 async def post_job(job: JobCreate, current_user=Depends(get_current_user)):
-    # Uses your existing geocoding and loop logic
     target_lat, target_lng = None, None
     if job.job_city:
         geo = gmaps.geocode(job.job_city)
-        if geo: 
+        if geo:
             loc = geo[0]["geometry"]["location"]
             target_lat, target_lng = loc["lat"], loc["lng"]
     
@@ -198,4 +200,4 @@ def _build_job_data(job: JobCreate, employer_id: str, lat, lng) -> dict:
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    return {"status": "ok", "service": "LaborGrow API"}
