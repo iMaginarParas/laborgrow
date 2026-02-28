@@ -38,6 +38,12 @@ class WorkerProfileUpdate(BaseModel):
     lat:          Optional[float] = None
     lng:          Optional[float] = None
 
+class JobCreate(BaseModel):
+    title: str
+    description: str
+    location: str
+    budget: Optional[float] = None
+
 # --- Auth Dependency ---
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     try:
@@ -63,7 +69,7 @@ async def login(body: AuthRequest):
         res = supabase.auth.sign_in_with_password({"email": body.email, "password": body.password})
         return {"status": "success", "session": res.session}
     except Exception as e:
-        raise HTTPException(status_code=401, detail="Invalid email or password")
+        raise HTTPException(status_code=401, detail=str(e))
 
 # --- PUBLIC ROUTES ---
 @app.get("/workers/search")
@@ -82,17 +88,32 @@ async def get_worker_public(worker_id: str):
     except Exception:
         raise HTTPException(status_code=404, detail="Worker not found")
 
+@app.get("/jobs/search")
+async def search_jobs(location: Optional[str] = None, title: Optional[str] = None):
+    query = supabase.table("jobs").select("id, title, location, budget, created_by")
+    if location: query = query.ilike("location", f"%{location}%")
+    if title: query = query.ilike("title", f"%{title}%")
+    res = query.execute()
+    return {"status": "success", "data": res.data}
+
 # --- PRIVATE ROUTES (Requires Auth) ---
 @app.post("/my-profile")
 async def upsert_profile(body: WorkerProfileUpdate, current_user=Depends(get_current_user)):
     data = body.model_dump(exclude_none=True)
-    
-    # Inject ID and Email to satisfy table constraints and security policies
     data["id"] = current_user.id 
     data["email"] = current_user.email 
-    
     try:
         res = supabase.table("employees").upsert(data).execute()
+        return {"status": "success", "data": res.data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+@app.post("/jobs")
+async def create_job(body: JobCreate, current_user=Depends(get_current_user)):
+    job_data = body.model_dump()
+    job_data["created_by"] = current_user.id
+    try:
+        res = supabase.table("jobs").insert(job_data).execute()
         return {"status": "success", "data": res.data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
