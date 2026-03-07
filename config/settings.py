@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import field_validator
 from typing import Optional
 
 class Settings(BaseSettings):
@@ -28,6 +29,20 @@ class Settings(BaseSettings):
     # External Payment (Razorpay)
     RAZORPAY_KEY_ID: Optional[str] = None
     RAZORPAY_KEY_SECRET: Optional[str] = None
+
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def assemble_db_connection(cls, v: str) -> str:
+        """
+        Ensures the database URL is compatible with asyncpg.
+        Railway and other providers often use 'postgres://', but asyncpg requires 'postgresql+asyncpg://'.
+        """
+        if v and v.startswith("postgres://"):
+            return v.replace("postgres://", "postgresql+asyncpg://", 1)
+        # Also handle cases where it might start with postgresql:// but missing the +asyncpg
+        if v and v.startswith("postgresql://") and "+asyncpg" not in v:
+            return v.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return v
 
     model_config = SettingsConfigDict(
         env_file=".env",
