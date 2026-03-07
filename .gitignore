@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.env
+
+# Databases
+*.sqlite3
+
+# IDEs
+.idea/
+.vscode/
+.DS_Store
+
+# Static analysis
+.mypy_cache/
+.pytest_cache/
