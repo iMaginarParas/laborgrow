@@ -1,7 +1,17 @@
+<<<<<<< HEAD
+=======
+# Environments
+.env
+.venv
+env/
+venv/
+
+>>>>>>> origin/master
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
+<<<<<<< HEAD
 venv/
 env/
 .env
@@ -17,3 +27,16 @@ env/
 # Static analysis
 .mypy_cache/
 .pytest_cache/
+=======
+
+# OS
+.DS_Store
+Thumbs.db
+
+# HTML
+index.html
+last.html
+post.html
+paras.html
+
+>>>>>>> origin/master
