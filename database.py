@@ -4,7 +4,10 @@ from config.settings import settings
 from supabase import create_client, Client
 
 # Async engine for efficient database connections
-engine = create_async_engine(settings.DATABASE_URL, echo=False)
+# We use a placeholder if DATABASE_URL is empty to prevent startup crashes during deployment
+DB_URL = settings.DATABASE_URL or "postgresql+asyncpg://placeholder:placeholder@localhost:5432/placeholder"
+
+engine = create_async_engine(DB_URL, echo=False)
 
 # Session factory for route-scoped transactions
 SessionLocal = async_sessionmaker(
@@ -15,7 +18,11 @@ SessionLocal = async_sessionmaker(
 )
 
 # Shared Supabase specialized client for direct integration features
-supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+# Supabase client is also made resilient to empty credentials
+if settings.SUPABASE_URL and settings.SUPABASE_KEY:
+    supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+else:
+    supabase = None
 
 class Base(DeclarativeBase):
     """
