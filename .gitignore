@@ -1,20 +1,13 @@
-<<<<<<< HEAD
-=======
 # Environments
 .env
 .venv
 env/
 venv/
 
->>>>>>> origin/master
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
-<<<<<<< HEAD
-venv/
-env/
-.env
 
 # Databases
 *.sqlite3
@@ -22,21 +15,17 @@ env/
 # IDEs
 .idea/
 .vscode/
-.DS_Store
-
-# Static analysis
-.mypy_cache/
-.pytest_cache/
-=======
 
 # OS
 .DS_Store
 Thumbs.db
 
-# HTML
+# Static analysis
+.mypy_cache/
+.pytest_cache/
+
+# HTML/Temp
 index.html
 last.html
 post.html
 paras.html
-
->>>>>>> origin/master
