@@ -13,9 +13,11 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
 
     # Database Settings
-    DATABASE_URL: str
-    SUPABASE_URL: str
-    SUPABASE_KEY: str
+    DATABASE_URL: str = ""
+    SUPABASE_URL: str = ""
+    SUPABASE_KEY: str = ""
+    SUPABASE_SERVICE_ROLE_KEY: Optional[str] = None
+    SUPABASE_ANON_KEY: Optional[str] = None
     
     # Internal Security
     SECRET_KEY: str = "super-secret-key-change-me-in-production"
@@ -30,6 +32,20 @@ class Settings(BaseSettings):
     # External Payment (Razorpay)
     RAZORPAY_KEY_ID: Optional[str] = None
     RAZORPAY_KEY_SECRET: Optional[str] = None
+
+    @field_validator("SUPABASE_KEY", mode="before")
+    @classmethod
+    def fallback_supabase_key(cls, v: str, info) -> str:
+        """
+        Railway often provides SUPABASE_SERVICE_ROLE_KEY or SUPABASE_ANON_KEY.
+        This ensures SUPABASE_KEY is populated if either is available.
+        """
+        if v:
+            return v
+        
+        # Accessing other fields from the raw data
+        data = info.data
+        return data.get("SUPABASE_SERVICE_ROLE_KEY") or data.get("SUPABASE_ANON_KEY") or ""
 
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
