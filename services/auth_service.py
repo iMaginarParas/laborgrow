@@ -54,7 +54,8 @@ class AuthService:
             profile_response = supabase.table(table_name).insert(user_data).execute()
             
             return {
-                "user": auth_response.user,
+                "user_id": str(auth_response.user.id),
+                "email": auth_response.user.email,
                 "profile": profile_response.data[0] if profile_response.data else None,
                 "role": role
             }
