@@ -23,7 +23,8 @@ class AuthService:
                 "options": {
                     "data": {
                         "name": user_in.name,
-                        "phone": user_in.phone
+                        "phone": user_in.phone,
+                        "role": user_in.city if user_in.city in ["employer", "employee"] else "employee" # Simple role assignment
                     }
                 }
             })
@@ -34,23 +35,27 @@ class AuthService:
                     detail="Registration failed with Supabase Auth."
                 )
             
-            # 2. Insert profile into public.users table
-            # Supabase might handle this with a trigger, but we'll do it explicitly here for control
+            # 2. Insert profile based on role
+            role = auth_response.user.user_metadata.get("role", "employee")
+            table_name = "employers" if role == "employer" else "employees"
+            
             user_data = {
                 "id": auth_response.user.id,
-                "name": user_in.name,
-                "email": user_in.email,
-                "phone": user_in.phone,
-                "profile_pic_url": user_in.profile_pic_url,
-                "address": user_in.address,
-                "city": user_in.city
+                "email": user_in.email
             }
+            if role == "employer":
+                user_data["company_name"] = user_in.name
+            else:
+                user_data["full_name"] = user_in.name
+                user_data["phone"] = user_in.phone
+                user_data["city"] = user_in.city
             
-            profile_response = supabase.table("users").insert(user_data).execute()
+            profile_response = supabase.table(table_name).insert(user_data).execute()
             
             return {
                 "user": auth_response.user,
-                "profile": profile_response.data[0] if profile_response.data else None
+                "profile": profile_response.data[0] if profile_response.data else None,
+                "role": role
             }
             
         except Exception as e:
@@ -71,10 +76,6 @@ class AuthService:
         """
         try:
             # Login via Supabase
-            # Note: Supabase sign_in_with_password primarily uses email
-            # If the user provides a phone number, we'd need to handle that differently or expect email.
-            # For now, we'll try to use the phone_or_email as email.
-            
             response = supabase.auth.sign_in_with_password({
                 "email": login_in.phone_or_email,
                 "password": login_in.password
@@ -95,8 +96,17 @@ class AuthService:
     @staticmethod
     async def get_user_profile(user_id: str) -> Optional[Dict[str, Any]]:
         """
-        Fetch the user profile from the public.users table.
+        Fetch the user profile from employees or employers table.
         """
-        response = supabase.table("users").select("*").eq("id", user_id).execute()
-        return response.data[0] if response.data else None
+        # Try employees first
+        res = supabase.table("employees").select("*").eq("id", user_id).execute()
+        if res.data:
+            return res.data[0]
+        
+        # Try employers
+        res = supabase.table("employers").select("*").eq("id", user_id).execute()
+        if res.data:
+            return res.data[0]
+            
+        return None
 
