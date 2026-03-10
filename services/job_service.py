@@ -47,10 +47,8 @@ class JobService:
             return nearby_jobs
 
         except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Database retrieval failed: {str(e)}"
-            )
+            # Let global handler pick up unexpected errors for polite reporting
+            raise e
 
     @staticmethod
     async def get_job_by_id(job_id: str) -> Optional[Dict[str, Any]]:
@@ -63,7 +61,4 @@ class JobService:
                 return response.data[0]
             return None
         except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Job detail retrieval failed: {str(e)}"
-            )
+            raise e

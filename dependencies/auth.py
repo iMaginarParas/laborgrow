@@ -36,7 +36,7 @@ async def get_current_user(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Authentication failed: {str(e)}",
+            detail="Session has expired or is invalid. Please login again.",
             headers={"WWW-Authenticate": "Bearer"},
         )
 

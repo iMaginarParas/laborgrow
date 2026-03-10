@@ -34,11 +34,12 @@ async def admin_dashboard():
     try:
         total_jobs         = supabase.table("jobs").select("id", count="exact").execute()
         total_bookings     = supabase.table("bookings").select("id", count="exact").execute()
-        total_users        = supabase.table("users").select("id", count="exact").execute()
+        # Use employees table as it's the primary user entity in our schema
+        total_users        = supabase.table("employees").select("id", count="exact").execute()
 
         recent_jobs = (
             supabase.table("jobs")
-            .select("id, title, company_name, job_city, created_at")
+            .select("id, title, job_city, created_at") # Company name might be missing in simple schema
             .order("created_at", desc=True)
             .limit(5)
             .execute()
@@ -54,7 +55,7 @@ async def admin_dashboard():
             "recent_jobs": recent_jobs.data or [],
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Dashboard error: {str(e)}")
+        raise e
 
 @router.post("/workers/{worker_id}/approve", response_model=Dict[str, str], dependencies=[Depends(require_admin)])
 async def approve_worker(
@@ -64,9 +65,9 @@ async def approve_worker(
     Approve a newly registered worker for inclusion in the marketplace.
     """
     try:
-        res = supabase.table("workers").update({"is_verified": True}).eq("id", worker_id).execute()
+        res = supabase.table("employees").update({"is_verified": True}).eq("id", worker_id).execute()
         if not res.data:
-             raise HTTPException(status_code=404, detail="Worker not found.")
-        return {"message": f"Worker {worker_id} successfully approved."}
+             raise HTTPException(status_code=404, detail="Worker record not found.")
+        return {"message": "Worker successfully approved."}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise e
