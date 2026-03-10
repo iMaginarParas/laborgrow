@@ -1,7 +1,6 @@
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
-from sqlalchemy.exc import SQLAlchemyError
 import time
 import uvicorn
 
@@ -10,7 +9,6 @@ from config.settings import settings
 from core.logger import logger
 from core.error_handler import (
     validation_exception_handler,
-    sqlalchemy_exception_handler,
     generic_exception_handler,
     http_exception_handler
 )
@@ -65,7 +63,6 @@ async def log_requests(request: Request, call_next):
 # --- EXCEPTION HANDLERS ---
 
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
-app.add_exception_handler(SQLAlchemyError, sqlalchemy_exception_handler)
 app.add_exception_handler(Exception, generic_exception_handler)
 # Note: HTTPException handler is added automatically by FastAPI, 
 # but we can override it if desired using the imported http_exception_handler.

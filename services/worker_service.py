@@ -1,68 +1,69 @@
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, func
-from sqlalchemy.orm import selectinload
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 import uuid
 
-from models.models import Worker, Category, worker_categories
+from database import supabase
 
 class WorkerService:
     """
-    Coordinator for the supply-side of the marketplace (Workers/Categories).
+    Coordinator for the supply-side of the marketplace (Workers/Categories) using Supabase.
     """
 
     @staticmethod
     async def list_workers(
-        db: AsyncSession,
         category_slug: Optional[str] = None,
         min_rating: float = 0.0,
         max_price: Optional[float] = None,
         is_active: bool = True
-    ) -> List[Worker]:
+    ) -> List[Dict[str, Any]]:
         """
-        Query the worker pool with multi-criteria filtering.
+        Query the worker pool with multi-criteria filtering via Supabase.
         """
-        stmt = select(Worker).options(
-            selectinload(Worker.user),
-            selectinload(Worker.categories),
-            selectinload(Worker.skills)
-        ).filter(Worker.is_active == is_active)
-
-        # Dynamic Filtering
-        if category_slug:
-            stmt = stmt.join(Worker.categories).filter(Category.slug == category_slug)
+        # Start query with joins
+        query = supabase.table("workers").select("*, user:users(*), categories:categories(*), skills:worker_skills(*)")
         
+        query = query.eq("is_active", is_active)
+
         if min_rating:
-            stmt = stmt.filter(Worker.rating >= min_rating)
+            query = query.gte("rating", min_rating)
         
         if max_price:
-            stmt = stmt.filter(Worker.hourly_rate <= max_price)
+            query = query.lte("hourly_rate", max_price)
 
-        result = await db.execute(stmt)
-        return result.scalars().all()
+        # Filtering by category slug requires a separate join or post-filtering
+        # In Supabase SDK, we can filter on nested components if the relationship is configured
+        if category_slug:
+            # We filter by the slug in the categories join
+            query = query.eq("categories.slug", category_slug)
+
+        result = query.execute()
+        
+        # If we filtered by category slug, Supabase SDK might return workers with empty 'categories' list
+        # We should filter them out in Python for correctness if the SDK doesn't do it automatically
+        workers = result.data or []
+        if category_slug:
+            workers = [w for w in workers if w.get("categories") and any(c["slug"] == category_slug for c in w["categories"])]
+            
+        return workers
 
     @staticmethod
     async def get_worker_detail(
-        db: AsyncSession, 
         worker_id: uuid.UUID
-    ) -> Optional[Worker]:
+    ) -> Optional[Dict[str, Any]]:
         """
         Fetch worker with full profile and skills metadata.
         """
-        stmt = select(Worker).options(
-            selectinload(Worker.user),
-            selectinload(Worker.categories),
-            selectinload(Worker.skills)
-        ).filter(Worker.id == worker_id)
+        result = supabase.table("workers")\
+            .select("*, user:users(*), categories:categories(*), skills:worker_skills(*)")\
+            .eq("id", str(worker_id))\
+            .execute()
         
-        result = await db.execute(stmt)
-        return result.scalar_one_or_none()
+        return result.data[0] if result.data else None
 
     @staticmethod
-    async def list_categories(db: AsyncSession) -> List[Category]:
+    async def list_categories() -> List[Dict[str, Any]]:
         """
         Retrieve all marketplace service categories.
         """
-        stmt = select(Category)
-        result = await db.execute(stmt)
-        return result.scalars().all()
+        result = supabase.table("categories").select("*").execute()
+        return result.data or []
+

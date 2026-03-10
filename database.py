@@ -1,41 +1,28 @@
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.orm import DeclarativeBase
 from config.settings import settings
 from supabase import create_client, Client
+import os
 
-# Async engine for efficient database connections
-# We use a placeholder if DATABASE_URL is empty to prevent startup crashes during deployment
-DB_URL = settings.DATABASE_URL or "postgresql+asyncpg://placeholder:placeholder@localhost:5432/placeholder"
+# Initialize Supabase Client
+# We use the Service Role Key for backend operations to bypass RLS when needed
+# or the Anon key if only public access is required.
+supabase_url = settings.SUPABASE_URL
+supabase_key = settings.SUPABASE_SERVICE_ROLE_KEY or settings.SUPABASE_KEY
 
-engine = create_async_engine(DB_URL, echo=False)
+if not supabase_url or not supabase_key:
+    # Fallback to env for cases where settings might not be fully loaded
+    supabase_url = os.environ.get("SUPABASE_URL")
+    supabase_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_KEY")
 
-# Session factory for route-scoped transactions
-SessionLocal = async_sessionmaker(
-    autocommit=False, 
-    autoflush=False, 
-    bind=engine, 
-    class_=AsyncSession
-)
-
-# Shared Supabase specialized client for direct integration features
-# Supabase client is also made resilient to empty credentials
-if settings.SUPABASE_URL and settings.SUPABASE_KEY:
-    supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+if supabase_url and supabase_key:
+    supabase: Client = create_client(supabase_url, supabase_key)
 else:
     supabase = None
 
-class Base(DeclarativeBase):
+async def get_supabase() -> Client:
     """
-    Standard declarative base used across all SQLAlchemy models.
+    FastAPI dependency yielding the Supabase client.
     """
-    pass
+    if not supabase:
+        raise Exception("Supabase client is not initialized. Check your environment variables.")
+    return supabase
 
-async def get_db():
-    """
-    FastAPI dependency yielding a thread-safe async database session.
-    """
-    async with SessionLocal() as session:
-        try:
-            yield session
-        finally:
-            await session.close()

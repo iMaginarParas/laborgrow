@@ -1,39 +1,42 @@
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
-from jose import jwt, JWTError
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from typing import Dict, Any
 
-from config.settings import settings
-from database import get_db
-from models.models import User
+from database import supabase
 
-# Standard OAuth2 scheme, though we use it with HTTPBearer context
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login")
+# Using HTTPBearer to support standard Bearer token headers from Flutter/Client
+security = HTTPBearer()
 
 async def get_current_user(
-    token: str = Depends(oauth2_scheme), 
-    db: AsyncSession = Depends(get_db)
-) -> User:
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+) -> Dict[str, Any]:
     """
-    Dependency to validate the JWT in the Request Authorization header
-    and return the current user.
+    Dependency to validate the Supabase JWT in the Request Authorization header
+    and return the current user profile/metadata.
     """
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+    token = credentials.credentials
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        user_id: str = payload.get("sub")
-        if user_id is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
+        # Validate the token with Supabase Auth
+        user_response = supabase.auth.get_user(token)
         
-    result = await db.execute(select(User).filter(User.id == user_id))
-    user = result.scalar_one_or_none()
-    if user is None:
-        raise credentials_exception
-    return user
+        if not user_response.user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or expired session",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        # We return the user object as a dictionary-like structure for consistency
+        return {
+            "id": user_response.user.id,
+            "email": user_response.user.email,
+            "user_metadata": user_response.user.user_metadata
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Authentication failed: {str(e)}",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+

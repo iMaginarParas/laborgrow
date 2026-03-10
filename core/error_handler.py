@@ -1,7 +1,6 @@
 from fastapi import Request, HTTPException, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
-from sqlalchemy.exc import SQLAlchemyError
 from core.logger import logger
 import traceback
 
@@ -14,16 +13,6 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={"detail": "Validation failed", "errors": error_details}
-    )
-
-async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
-    """
-    Handle errors originating from SQLAlchemy/Database.
-    """
-    logger.error("Database error", path=request.url.path, description=str(exc))
-    return JSONResponse(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"detail": "A database error occurred. Please try again later."}
     )
 
 async def generic_exception_handler(request: Request, exc: Exception):

@@ -1,105 +1,102 @@
-from datetime import datetime, timedelta
-from typing import Optional, Any
-from jose import jwt, JWTError
-from passlib.context import CryptContext
+from typing import Optional, Any, Dict
 from fastapi import HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-import uuid
+from supabase import Client
 
-from config.settings import settings
-from models.models import User
+from database import supabase
 from models.schemas import UserCreate, LoginRequest
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 class AuthService:
     """
-    High-level business logic for user authentication, passwords, 
-    and session management.
+    High-level business logic for user authentication using Supabase Auth.
     """
 
     @staticmethod
-    def verify_password(plain_password: str, hashed_password: str) -> bool:
+    async def register_user(user_in: UserCreate) -> Dict[str, Any]:
         """
-        Securely compare a plain text password to its salted hash.
+        Coordinate user registration using Supabase Auth and profile creation.
         """
-        return pwd_context.verify(plain_password, hashed_password)
-
-    @staticmethod
-    def get_password_hash(password: str) -> str:
-        """
-        Generate a secure bcrypt hash of a given password.
-        """
-        return pwd_context.hash(password)
-
-    @staticmethod
-    def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-        """
-        Issue a new JWT access token sign with LaborGrow's HMAC signature.
-        """
-        to_encode = data.copy()
-        if expires_delta:
-            expire = datetime.utcnow() + expires_delta
-        else:
-            expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-        to_encode.update({"exp": expire})
-        encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-        return encoded_jwt
-
-    @staticmethod
-    def create_refresh_token(data: dict) -> str:
-        """
-        Longer expiration token to support seamless session recovery.
-        """
-        expire = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-        to_encode = data.copy()
-        to_encode.update({"exp": expire})
-        encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-        return encoded_jwt
-
-    @staticmethod
-    async def register_user(db: AsyncSession, user_in: UserCreate) -> User:
-        """
-        Coordinate user registration: uniqueness checks, password hashing, and DB save.
-        """
-        # Validate uniqueness of identifiers
-        stmt = select(User).filter((User.email == user_in.email) | (User.phone == user_in.phone))
-        result = await db.execute(stmt)
-        if result.first():
+        try:
+            # 1. Sign up with Supabase Auth
+            auth_response = supabase.auth.sign_up({
+                "email": user_in.email,
+                "password": user_in.password,
+                "options": {
+                    "data": {
+                        "name": user_in.name,
+                        "phone": user_in.phone
+                    }
+                }
+            })
+            
+            if not auth_response.user:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Registration failed with Supabase Auth."
+                )
+            
+            # 2. Insert profile into public.users table
+            # Supabase might handle this with a trigger, but we'll do it explicitly here for control
+            user_data = {
+                "id": auth_response.user.id,
+                "name": user_in.name,
+                "email": user_in.email,
+                "phone": user_in.phone,
+                "profile_pic_url": user_in.profile_pic_url,
+                "address": user_in.address,
+                "city": user_in.city
+            }
+            
+            profile_response = supabase.table("users").insert(user_data).execute()
+            
+            return {
+                "user": auth_response.user,
+                "profile": profile_response.data[0] if profile_response.data else None
+            }
+            
+        except Exception as e:
+            if "already registered" in str(e).lower():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="User with this email already exists."
+                )
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="User with this email or phone already exists."
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Registration failed: {str(e)}"
             )
-        
-        # Create user with hashed credentials
-        new_user = User(
-            name=user_in.name,
-            email=user_in.email,
-            phone=user_in.phone,
-            password_hash=AuthService.get_password_hash(user_in.password),
-            profile_pic_url=user_in.profile_pic_url,
-            address=user_in.address,
-            city=user_in.city
-        )
-        
-        db.add(new_user)
-        await db.commit()
-        await db.refresh(new_user)
-        return new_user
 
     @staticmethod
-    async def authenticate_user(db: AsyncSession, login_in: LoginRequest) -> Optional[User]:
+    async def authenticate_user(login_in: LoginRequest) -> Dict[str, Any]:
         """
-        Validate credentials for login flow.
+        Validate credentials via Supabase Auth.
         """
-        # Search by email OR phone
-        stmt = select(User).filter(
-            (User.email == login_in.phone_or_email) | (User.phone == login_in.phone_or_email)
-        )
-        result = await db.execute(stmt)
-        user = result.scalar_one_or_none()
-        
-        if not user or not AuthService.verify_password(login_in.password, user.password_hash):
-            return None
-        return user
+        try:
+            # Login via Supabase
+            # Note: Supabase sign_in_with_password primarily uses email
+            # If the user provides a phone number, we'd need to handle that differently or expect email.
+            # For now, we'll try to use the phone_or_email as email.
+            
+            response = supabase.auth.sign_in_with_password({
+                "email": login_in.phone_or_email,
+                "password": login_in.password
+            })
+            
+            return {
+                "access_token": response.session.access_token,
+                "refresh_token": response.session.refresh_token,
+                "token_type": response.session.token_type,
+                "user": response.user
+            }
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid credentials or authentication failed."
+            )
+
+    @staticmethod
+    async def get_user_profile(user_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Fetch the user profile from the public.users table.
+        """
+        response = supabase.table("users").select("*").eq("id", user_id).execute()
+        return response.data[0] if response.data else None
+

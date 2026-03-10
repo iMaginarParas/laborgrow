@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 import uuid
 from typing import List, Optional
 
-from database import get_db
+from database import get_supabase
 from models.schemas import WorkerResponse, CategoryResponse
 from services.worker_service import WorkerService
 
@@ -17,34 +16,31 @@ async def list_workers(
     lng: Optional[float] = Query(None, description="Supply search longitude"),
     radius: Optional[float] = Query(10.0, description="Radial distance limit"),
     min_rating: float = Query(0.0, description="Minimum star rating filter"),
-    max_price: Optional[float] = Query(None, description="Maximum cost per hour filter"),
-    db: AsyncSession = Depends(get_db)
+    max_price: Optional[float] = Query(None, description="Maximum cost per hour filter")
 ) -> List[WorkerResponse]:
     """
-    Explore available service providers on the LaborGrow marketplace.
+    Explore available service providers on the LaborGrow marketplace using Supabase.
     """
     return await WorkerService.list_workers(
-        db, category, min_rating, max_price
+        category, min_rating, max_price
     )
 
 @router.get("/{worker_id}", response_model=WorkerResponse)
 async def get_worker_detail(
-    worker_id: uuid.UUID, 
-    db: AsyncSession = Depends(get_db)
+    worker_id: uuid.UUID
 ) -> WorkerResponse:
     """
     Get the professional profile and skill set for a specific worker.
     """
-    worker = await WorkerService.get_worker_detail(db, worker_id)
+    worker = await WorkerService.get_worker_detail(worker_id)
     if not worker:
         raise HTTPException(status_code=404, detail="Worker profile not found.")
     return worker
 
 @cat_router.get("/", response_model=List[CategoryResponse])
-async def list_categories(
-    db: AsyncSession = Depends(get_db)
-) -> List[CategoryResponse]:
+async def list_categories() -> List[CategoryResponse]:
     """
     Discover all job categories mapped in the platform.
     """
-    return await WorkerService.list_categories(db)
+    return await WorkerService.list_categories()
+

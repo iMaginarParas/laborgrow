@@ -2,18 +2,14 @@ import random
 import uuid
 from datetime import datetime
 from typing import List, Dict, Any, Optional
-from sqlalchemy import select, func
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status
 
-from models.models import Booking, Worker, User
+from database import supabase
 from models.schemas import BookingCreate
 
 class BookingService:
     """
-    Business logic coordinator for the booking lifecycle:
-    pricing -> validation -> database transaction.
+    Business logic coordinator for the booking lifecycle using Supabase.
     """
 
     @staticmethod
@@ -48,86 +44,79 @@ class BookingService:
 
     @staticmethod
     async def create_booking(
-        db: AsyncSession, 
         booking_in: BookingCreate, 
-        current_user: User
-    ) -> Booking:
+        current_user: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
-        Process a new booking transaction. Validates worker presence and computes production-grade pricing.
+        Process a new booking transaction via Supabase.
         """
         # 1. Fetch target worker details
-        result = await db.execute(select(Worker).filter(Worker.id == booking_in.worker_id))
-        worker = result.scalar_one_or_none()
+        worker_res = supabase.table("workers").select("*").eq("id", str(booking_in.worker_id)).single().execute()
+        worker = worker_res.data
         if not worker:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Specified worker not found.")
 
         # 2. Check for onboarding discount eligibility
-        count_stmt = select(func.count()).select_from(Booking).filter(Booking.customer_id == current_user.id)
-        bookings_count = await db.execute(count_stmt)
-        is_first = bookings_count.scalar() == 0
+        count_res = supabase.table("bookings").select("id", count="exact").eq("customer_id", current_user["id"]).execute()
+        is_first = (count_res.count or 0) == 0
         
         # 3. Finalize Pricing
         pricing = BookingService.calculate_pricing(
-            hourly_rate=worker.hourly_rate,
+            hourly_rate=worker["hourly_rate"],
             hours=booking_in.hours,
             is_first_booking=is_first
         )
 
         # 4. Persistence
-        new_booking = Booking(
-            customer_id=current_user.id,
-            worker_id=booking_in.worker_id,
-            category_id=booking_in.category_id,
-            booking_date=booking_in.booking_date,
-            time_slot=booking_in.time_slot,
-            hours=booking_in.hours,
-            address=booking_in.address,
-            total_amount=pricing["total_amount"],
-            platform_fee=pricing["platform_fee"],
-            discount_amount=pricing["discount_amount"],
-            booking_ref=BookingService.generate_booking_ref(),
-            status="pending"
-        )
+        new_booking_data = {
+            "id": str(uuid.uuid4()),
+            "customer_id": current_user["id"],
+            "worker_id": str(booking_in.worker_id),
+            "category_id": booking_in.category_id,
+            "booking_date": booking_in.booking_date,
+            "time_slot": booking_in.time_slot,
+            "hours": booking_in.hours,
+            "address": booking_in.address,
+            "total_amount": pricing["total_amount"],
+            "platform_fee": pricing["platform_fee"],
+            "discount_amount": pricing["discount_amount"],
+            "booking_ref": BookingService.generate_booking_ref(),
+            "status": "pending"
+        }
         
-        db.add(new_booking)
-        await db.commit()
-        await db.refresh(new_booking)
+        insert_res = supabase.table("bookings").insert(new_booking_data).execute()
+        if not insert_res.data:
+             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create booking.")
         
         # 5. Return detailed view
-        return await BookingService.get_booking_detail(db, new_booking.id)
+        return await BookingService.get_booking_detail(insert_res.data[0]["id"])
 
     @staticmethod
     async def get_booking_detail(
-        db: AsyncSession, 
-        booking_id: uuid.UUID
-    ) -> Optional[Booking]:
+        booking_id: str
+    ) -> Optional[Dict[str, Any]]:
         """
         Fetch booking with full relationship hydration (Worker, User, Categories).
         """
-        stmt = (
-            select(Booking)
-            .options(
-                selectinload(Booking.worker).selectinload(Worker.user),
-                selectinload(Booking.worker).selectinload(Worker.categories),
-                selectinload(Booking.worker).selectinload(Worker.skills)
-            )
-            .filter(Booking.id == booking_id)
-        )
-        result = await db.execute(stmt)
-        return result.scalar_one_or_none()
+        result = supabase.table("bookings")\
+            .select("*, worker:workers(*, user:users(*), categories:categories(*), skills:worker_skills(*))")\
+            .eq("id", str(booking_id))\
+            .execute()
+        
+        return result.data[0] if result.data else None
 
     @staticmethod
     async def list_customer_bookings(
-        db: AsyncSession, 
-        customer_id: uuid.UUID
-    ) -> List[Booking]:
+        customer_id: str
+    ) -> List[Dict[str, Any]]:
         """
-        Optimized query for retrieving history for a specific customer.
+        Retrieve history for a specific customer from Supabase.
         """
-        stmt = (
-            select(Booking)
-            .filter(Booking.customer_id == customer_id)
-            .order_by(Booking.created_at.desc())
-        )
-        result = await db.execute(stmt)
-        return result.scalars().all()
+        result = supabase.table("bookings")\
+            .select("*, worker:workers(*, user:users(*))")\
+            .eq("customer_id", str(customer_id))\
+            .order("created_at", desc=True)\
+            .execute()
+        
+        return result.data or []
+

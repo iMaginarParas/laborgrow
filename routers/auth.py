@@ -1,62 +1,45 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Any
+from typing import Any, Dict
 
-from database import get_db
-from models.models import User
+from database import get_supabase
 from models.schemas import UserCreate, Token, LoginRequest, UserResponse
 from services.auth_service import AuthService
 from dependencies.auth import get_current_user
 
 router = APIRouter(prefix="/auth", tags=["User Authentication"])
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(
-    user_in: UserCreate, 
-    db: AsyncSession = Depends(get_db)
-) -> UserResponse:
+    user_in: UserCreate
+) -> Dict[str, Any]:
     """
-    Onboard a new user with standard LaborGrow validation and encryption.
+    Onboard a new user using Supabase Auth and professional profile creation.
     """
-    try:
-        new_user = await AuthService.register_user(db, user_in)
-        return new_user
-    except Exception as e:
-        if isinstance(e, HTTPException):
-            raise e
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Registration failed: {str(e)}"
-        )
+    return await AuthService.register_user(user_in)
 
 @router.post("/login", response_model=Token)
 async def login(
-    credentials: LoginRequest, 
-    db: AsyncSession = Depends(get_db)
+    credentials: LoginRequest
 ) -> Token:
     """
-    Verify identity and issue JWT access and refresh tokens.
+    Verify identity via Supabase and return access/refresh tokens.
     """
-    user = await AuthService.authenticate_user(db, credentials)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid contact info or password.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    access_token = AuthService.create_access_token(data={"sub": str(user.id)})
-    refresh_token = AuthService.create_refresh_token(data={"sub": str(user.id)})
+    auth_data = await AuthService.authenticate_user(credentials)
     
     return {
-        "access_token": access_token,
-        "refresh_token": refresh_token,
+        "access_token": auth_data["access_token"],
+        "refresh_token": auth_data["refresh_token"],
         "token_type": "bearer"
     }
 
 @router.get("/me", response_model=UserResponse)
-async def get_me(current_user: User = Depends(get_current_user)) -> UserResponse:
+async def get_me(current_user: Dict[str, Any] = Depends(get_current_user)) -> Any:
     """
-    Fetch details of the currently authorized user context.
+    Fetch details of the currently authorized user context from Supabase.
     """
-    return current_user
+    # current_user from dependency is expected to be the profile data or user object
+    profile = await AuthService.get_user_profile(str(current_user["id"]))
+    if not profile:
+        raise HTTPException(status_code=404, detail="User profile not found")
+    return profile
+
