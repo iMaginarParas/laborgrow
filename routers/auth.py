@@ -42,4 +42,15 @@ async def get_me(current_user: Dict[str, Any] = Depends(get_current_user)) -> An
     if not profile:
         raise HTTPException(status_code=404, detail="User profile not found")
     return profile
-
+@router.put("/me", response_model=UserResponse)
+async def update_me(
+    updates: Dict[str, Any],
+    current_user: Dict[str, Any] = Depends(get_current_user)
+) -> Any:
+    """
+    Update details of the currently authorized user.
+    """
+    profile = await AuthService.update_user_profile(str(current_user["id"]), updates)
+    if not profile:
+        raise HTTPException(status_code=404, detail="User profile not found")
+    return profile

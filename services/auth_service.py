@@ -103,6 +103,37 @@ class AuthService:
             )
 
     @staticmethod
+    async def update_user_profile(user_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Identify user role and apply updates to the correct profile table.
+        """
+        # 1. Determine role by checking both tables (or use auth metadata if preferred)
+        is_employee = supabase.table("employees").select("id").eq("id", user_id).execute().data
+        table_name = "employees" if is_employee else "employers"
+        
+        # 2. Map frontend field names to database columns
+        db_updates = {}
+        if "name" in updates:
+            db_updates["full_name" if is_employee else "company_name"] = updates["name"]
+        if "phone" in updates:
+            db_updates["phone"] = updates["phone"]
+        if "city" in updates:
+            db_updates["city"] = updates["city"]
+        if "bio" in updates:
+            db_updates["bio"] = updates["bio"]
+        if "profile_pic_url" in updates:
+            db_updates["profile_pic_url"] = updates["profile_pic_url"]
+
+        if not db_updates:
+            return await AuthService.get_user_profile(user_id)
+
+        # 3. Apply updates
+        result = supabase.table(table_name).update(db_updates).eq("id", user_id).execute()
+        
+        if result.data:
+            return await AuthService.get_user_profile(user_id)
+        return None
+    @staticmethod
     async def get_user_profile(user_id: str) -> Optional[Dict[str, Any]]:
         """
         Fetch and unify profile from employees or employers table.
@@ -123,4 +154,3 @@ class AuthService:
             return profile
             
         return None
-
