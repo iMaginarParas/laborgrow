@@ -9,6 +9,35 @@ class WorkerService:
     """
 
     @staticmethod
+    def _format_worker(data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Formats flat row from 'employees' table into the nested structure 
+        expected by the Flutter app.
+        """
+        return {
+            "id": data.get("id"),
+            "bio": data.get("bio", ""),
+            "city": data.get("city", ""),
+            "hourly_rate": data.get("hourly_rate", 500.0),
+            "experience_years": data.get("experience_years", 0),
+            "rating": data.get("rating", 4.5),
+            "is_verified": data.get("is_verified", False),
+            "is_available": data.get("is_available", True),
+            "user": {
+                "id": data.get("id"),
+                "name": data.get("full_name", "Worker"),
+                "email": data.get("email", ""),
+                "phone": data.get("phone", ""),
+                "profile_pic_url": data.get("profile_pic_url")
+            },
+            # Fallback lists to prevent parsing errors
+            "categories": data.get("categories", [
+                {"id": 1, "name": "General", "emoji": "🛠️", "slug": "general"}
+            ]),
+            "skills": data.get("skills", [])
+        }
+
+    @staticmethod
     async def list_workers(
         category_slug: Optional[str] = None,
         min_rating: float = 0.0,
@@ -18,18 +47,8 @@ class WorkerService:
         """
         Query the employees pool via Supabase.
         """
-        # Start query on employees
         query = supabase.table("employees").select("*")
         
-        # Filtering (only use available columns)
-        # Note: If is_active/rating/hourly_rate aren't in the schema, we skip filtering on them for now
-        # result = query.execute()
-        
-        # Based on inspection, we have: ['id', 'email', 'full_name', 'phone', 'city', 'lat', 'lng', 'experience_years', 'hourly_rate', 'bio', 'is_verified', 'rating']
-        if is_active:
-             # Assuming we add is_active later or use a different flag
-             pass
-
         if min_rating:
             query = query.gte("rating", min_rating)
         
@@ -39,7 +58,7 @@ class WorkerService:
         result = query.execute()
         workers = result.data or []
             
-        return workers
+        return [WorkerService._format_worker(w) for w in workers]
 
     @staticmethod
     async def get_worker_detail(
@@ -53,7 +72,9 @@ class WorkerService:
             .eq("id", str(worker_id))\
             .execute()
         
-        return result.data[0] if result.data else None
+        if result.data:
+            return WorkerService._format_worker(result.data[0])
+        return None
 
     @staticmethod
     async def list_categories() -> List[Dict[str, Any]]:

@@ -105,17 +105,22 @@ class AuthService:
     @staticmethod
     async def get_user_profile(user_id: str) -> Optional[Dict[str, Any]]:
         """
-        Fetch the user profile from employees or employers table.
+        Fetch and unify profile from employees or employers table.
+        Adds 'name' field for frontend compatibility.
         """
         # Try employees first
         res = supabase.table("employees").select("*").eq("id", user_id).execute()
         if res.data:
-            return res.data[0]
+            profile = res.data[0]
+            profile["name"] = profile.get("full_name")
+            return profile
         
         # Try employers
         res = supabase.table("employers").select("*").eq("id", user_id).execute()
         if res.data:
-            return res.data[0]
+            profile = res.data[0]
+            profile["name"] = profile.get("company_name")
+            return profile
             
         return None
 
