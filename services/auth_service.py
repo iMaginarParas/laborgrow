@@ -3,6 +3,7 @@ from fastapi import HTTPException, status
 from supabase import Client
 
 from database import supabase
+from core.logger import logger
 from models.schemas import UserCreate, LoginRequest
 
 class AuthService:
@@ -73,13 +74,21 @@ class AuthService:
     async def authenticate_user(login_in: LoginRequest) -> Dict[str, Any]:
         """
         Validate credentials via Supabase Auth.
+        Supports both email and phone number login.
         """
         try:
-            # Login via Supabase
-            response = supabase.auth.sign_in_with_password({
-                "email": login_in.phone_or_email,
-                "password": login_in.password
-            })
+            identifier = login_in.phone_or_email.strip()
+            # Simple check: if it contains '@', assume email; otherwise assume phone
+            if "@" in identifier:
+                auth_data = {"email": identifier, "password": login_in.password}
+            else:
+                # Format phone number for Supabase (e.g., adding +91 if missing and 10 digits)
+                phone_number = identifier
+                if len(phone_number) == 10 and not phone_number.startswith("+"):
+                    phone_number = f"+91{phone_number}" # Default to India for this demo
+                auth_data = {"phone": phone_number, "password": login_in.password}
+            
+            response = supabase.auth.sign_in_with_password(auth_data)
             
             return {
                 "access_token": response.session.access_token,
@@ -88,9 +97,10 @@ class AuthService:
                 "user": response.user
             }
         except Exception as e:
+            logger.error(f"Authentication failed: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid credentials or authentication failed."
+                detail="Invalid credentials. Please check your email/phone and password."
             )
 
     @staticmethod

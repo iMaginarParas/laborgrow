@@ -1,94 +1,99 @@
 import uuid
-from database import supabase
+import os
+from dotenv import load_dotenv
+from supabase import create_client
+from database import supabase as public_supabase
+
+load_dotenv()
+
+# Admin client for Auth management
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+admin_supabase = create_client(SUPABASE_URL, SERVICE_KEY)
 
 def seed_marketplace_data():
-    print("🚀 Starting marketplace data seed...")
+    print("🚀 Starting marketplace data seed with Auth users...")
 
-    # 1. Seed Categories (if table exists)
+    # 1. Seed Categories
     categories = [
         {"name": "Plumbing", "slug": "plumbing", "icon_url": "https://cdn-icons-png.flaticon.com/512/3015/3015143.png"},
         {"name": "Electrical", "slug": "electrical", "icon_url": "https://cdn-icons-png.flaticon.com/512/3105/3105807.png"},
-        {"name": "Cleaning", "slug": "cleaning", "icon_url": "https://cdn-icons-png.flaticon.com/512/2954/2954893.png"},
-        {"name": "Carpentry", "slug": "carpentry", "icon_url": "https://cdn-icons-png.flaticon.com/512/2415/2415302.png"}
+        {"name": "Cleaning", "slug": "cleaning", "icon_url": "https://cdn-icons-png.flaticon.com/512/2954/2954893.png"}
     ]
-
     try:
-        print("Inserting categories...")
-        supabase.table("categories").upsert(categories, on_conflict="slug").execute()
+        public_supabase.table("categories").upsert(categories, on_conflict="slug").execute()
         print("✅ Categories seeded.")
     except Exception as e:
-        print(f"⚠️ Could not seed categories (Table might be missing): {e}")
+        print(f"⚠️ Categories skipped: {e}")
 
-    # 2. Seed Sample Employees (Workers)
-    # We use existing or new UUIDs for employees
-    sample_employees = [
+    # 2. Seed Real Auth Users & Employees
+    test_workers = [
         {
-            "id": str(uuid.uuid4()),
-            "full_name": "Rajesh Kumar",
-            "email": f"rajesh_{uuid.uuid4().hex[:4]}@example.com",
-            "phone": "9876543210",
+            "full_name": "Rajesh Plumber",
+            "email": "rajesh@laborgrow.com",
+            "phone": "+919876543210",
+            "password": "password123",
             "city": "Mumbai",
-            "hourly_rate": 450.0,
-            "rating": 4.8,
-            "bio": "Expert plumber with 10 years of experience in residential and commercial repairs.",
-            "is_verified": True,
-            "lat": 19.0760,
-            "lng": 72.8777
+            "hourly_rate": 450.0
         },
         {
-            "id": str(uuid.uuid4()),
-            "full_name": "Priya Sharma",
-            "email": f"priya_{uuid.uuid4().hex[:4]}@example.com",
-            "phone": "9876543211",
-            "city": "Delhi",
-            "hourly_rate": 600.0,
-            "rating": 4.9,
-            "bio": "Certified electrician specializing in smart home installations and wiring.",
-            "is_verified": True,
-            "lat": 28.6139,
-            "lng": 77.2090
+            "full_name": "Test User",
+            "email": "test@laborgrow.com",
+            "phone": "+919999999999", # Matches the screenshot
+            "password": "password123", # Default common password
+            "city": "Pune",
+            "hourly_rate": 500.0
+        },
+        {
+            "full_name": "Admin User",
+            "email": "admin@laborgrow.com",
+            "phone": "+911234567890",
+            "password": "password123",
+            "city": "Mumbai",
+            "hourly_rate": 1000.0
         }
     ]
 
-    try:
-        print("Inserting sample employees...")
-        supabase.table("employees").upsert(sample_employees, on_conflict="email").execute()
-        print("✅ Employees seeded.")
-    except Exception as e:
-        print(f"❌ Failed to seed employees: {e}")
+    for data in test_workers:
+        try:
+            print(f"Creating Auth user for {data['email']}...")
+            # Create in Supabase Auth
+            auth_user = admin_supabase.auth.admin.create_user({
+                "email": data["email"],
+                "phone": data["phone"],
+                "password": data["password"],
+                "email_confirm": True,
+                "phone_confirm": True,
+                "user_metadata": {"name": data["full_name"], "role": "employee"}
+            })
 
-    # 3. Seed Sample Jobs
+            # Sync to public.employees
+            employee_profile = {
+                "id": auth_user.user.id,
+                "full_name": data["full_name"],
+                "email": data["email"],
+                "phone": data["phone"],
+                "city": data["city"],
+                "hourly_rate": data["hourly_rate"],
+                "is_verified": True,
+                "rating": 4.5
+            }
+            public_supabase.table("employees").upsert(employee_profile, on_conflict="id").execute()
+            print(f"✅ User {data['email']} created and synced.")
+        except Exception as e:
+            print(f"⚠️ User {data['email']} skipped (might already exist): {e}")
+
+    # 3. Seed Jobs
     sample_jobs = [
-        {
-            "title": "Fix Leaking Pipe",
-            "description": "Kitchen sink pipe is leaking, needs immediate repair.",
-            "job_city": "Mumbai",
-            "salary_min": 500,
-            "salary_max": 2000,
-            "lat": 19.0760,
-            "lng": 72.8777,
-            "status": "open"
-        },
-        {
-            "title": "Home Cleaning Service",
-            "description": "Deep cleaning for a 3BHK apartment required this weekend.",
-            "job_city": "Delhi",
-            "salary_min": 1500,
-            "salary_max": 5000,
-            "lat": 28.6139,
-            "lng": 77.2090,
-            "status": "open"
-        }
+        {"title": "Industrial Wiring", "description": "Need expert for factory wiring.", "job_city": "Mumbai", "salary_min": 5000, "salary_max": 15000}
     ]
-
     try:
-        print("Inserting sample jobs...")
-        supabase.table("jobs").upsert(sample_jobs).execute()
+        public_supabase.table("jobs").upsert(sample_jobs).execute()
         print("✅ Jobs seeded.")
     except Exception as e:
-        print(f"❌ Failed to seed jobs: {e}")
+        print(f"⚠️ Jobs skipped: {e}")
 
-    print("\n🏁 Seeding process finished!")
+    print("\n🏁 Seeding process complete!")
 
 if __name__ == "__main__":
     seed_marketplace_data()
