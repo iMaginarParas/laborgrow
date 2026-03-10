@@ -25,7 +25,7 @@ class AuthService:
                     "data": {
                         "name": user_in.name,
                         "phone": user_in.phone,
-                        "role": user_in.city if user_in.city in ["employer", "employee"] else "employee" # Simple role assignment
+                        "role": user_in.role if user_in.role in ["employer", "employee"] else "employee"
                     }
                 }
             })

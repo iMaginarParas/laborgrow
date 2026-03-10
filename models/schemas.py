@@ -14,6 +14,7 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str
+    role: Optional[str] = "employee"
 
 class UserResponse(UserBase):
     id: UUID
