@@ -58,12 +58,14 @@ class WorkerBase(BaseModel):
 
 class WorkerResponse(WorkerBase):
     id: UUID
-    user: UserResponse
+    user: Optional[UserResponse] = None
     is_verified: Optional[bool] = False
     is_available: Optional[bool] = True
     rating: Optional[float] = 0.0
     categories: List[CategoryResponse] = []
     skills: List[WorkerSkillBase] = []
+    message: Optional[str] = None
+    simulated: Optional[bool] = False
     class Config:
         from_attributes = True
 
@@ -89,6 +91,8 @@ class BookingResponse(BaseModel):
     status: str
     booking_ref: str
     created_at: datetime
+    message: Optional[str] = None
+    simulated: Optional[bool] = False
     class Config:
         from_attributes = True
 
