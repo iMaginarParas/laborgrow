@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from uuid import UUID
 from datetime import datetime
 from typing import List, Optional
@@ -66,6 +66,14 @@ class WorkerResponse(WorkerBase):
     skills: List[WorkerSkillBase] = []
     message: Optional[str] = None
     simulated: Optional[bool] = False
+
+    @field_validator("categories", "skills", mode="before")
+    @classmethod
+    def coerce_none_to_list(cls, v):
+        if v is None:
+            return []
+        return v
+
     class Config:
         from_attributes = True
 
