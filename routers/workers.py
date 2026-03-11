@@ -9,7 +9,7 @@ from services.worker_service import WorkerService
 router = APIRouter(prefix="/workers", tags=["Workers Pool"])
 cat_router = APIRouter(prefix="/categories", tags=["Service Categories"])
 
-@router.get("/", response_model=List[WorkerResponse])
+@router.get("", response_model=List[WorkerResponse])
 async def list_workers(
     category: Optional[str] = Query(None, description="Category filter by slug"),
     lat: Optional[float] = Query(None, description="Supply search latitude"),
@@ -37,7 +37,7 @@ async def get_worker_detail(
         raise HTTPException(status_code=404, detail="Worker profile not found.")
     return worker
 
-@cat_router.get("/", response_model=List[CategoryResponse])
+@cat_router.get("", response_model=List[CategoryResponse])
 async def list_categories() -> List[CategoryResponse]:
     """
     Discover all job categories mapped in the platform.

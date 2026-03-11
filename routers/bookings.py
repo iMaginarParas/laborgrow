@@ -9,7 +9,7 @@ from services.booking_service import BookingService
 
 router = APIRouter(prefix="/bookings", tags=["Bookings Ecosystem"])
 
-@router.post("/", response_model=BookingResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=BookingResponse, status_code=status.HTTP_201_CREATED)
 async def create_booking(
     booking_in: BookingCreate,
     current_user: Dict[str, Any] = Depends(get_current_user)
@@ -28,7 +28,7 @@ async def create_booking(
             detail=f"Transaction processing failed: {str(e)}"
         )
 
-@router.get("/", response_model=List[BookingResponse])
+@router.get("", response_model=List[BookingResponse])
 async def list_customer_bookings(
     current_user: Dict[str, Any] = Depends(get_current_user)
 ) -> List[BookingResponse]:
