@@ -5,15 +5,15 @@ from typing import List, Optional
 
 # --- CORE USER SCHEMAS ---
 class UserBase(BaseModel):
-    name: str
+    name: str = Field(..., min_length=2, max_length=50)
     email: EmailStr
-    phone: str
+    phone: str = Field(..., min_length=10, max_length=15)
     profile_pic_url: Optional[str] = None
     address: Optional[str] = None
     city: Optional[str] = None
 
 class UserCreate(UserBase):
-    password: str
+    password: str = Field(..., min_length=6, description="Password must be at least 6 characters")
     role: Optional[str] = "employee"
 
 class UserResponse(UserBase):
@@ -29,8 +29,8 @@ class Token(BaseModel):
     token_type: str
 
 class LoginRequest(BaseModel):
-    phone_or_email: str
-    password: str
+    phone_or_email: str = Field(..., min_length=3)
+    password: str = Field(..., min_length=1)
 
 # --- SERVICE CATEGORY SCHEMAS ---
 class CategoryBase(BaseModel):

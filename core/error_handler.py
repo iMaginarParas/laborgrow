@@ -11,19 +11,30 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     error_details = exc.errors()
     logger.error("Validation error", path=request.url.path, errors=error_details)
     
-    # Extract just the field names for a cleaner message
-    missing_fields = [str(err['loc'][-1]) for err in error_details if err['type'] == 'value_error.missing']
-    
-    msg = "Please fill in all required information."
-    if missing_fields:
-        msg = f"Incomplete information. Please check: {', '.join(missing_fields)}"
+    # Try to get the first specific error message
+    try:
+        first_error = error_details[0]
+        field_name = str(first_error['loc'][-1]).replace('_', ' ').capitalize()
+        error_type = first_error['type']
+        
+        if error_type == 'value_error.missing':
+            msg = f"{field_name} is required."
+        elif 'min_length' in error_type:
+            limit = first_error.get('ctx', {}).get('limit_value', '?')
+            msg = f"{field_name} must be at least {limit} characters long."
+        elif error_type == 'value_error.email':
+            msg = "Please provide a valid email address."
+        else:
+            msg = first_error.get('msg', "Invalid information provided.")
+    except Exception:
+        msg = "Please fill in all required information."
 
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={
             "status": "error",
             "message": msg,
-            "detail": "Data verification failed. Please check your input."
+            "detail": "Data verification failed."
         }
     )
 

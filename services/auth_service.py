@@ -61,14 +61,19 @@ class AuthService:
             }
             
         except Exception as e:
-            if "already registered" in str(e).lower() or "already exists" in str(e).lower():
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="This email is already registered. Please login or use another email."
-                )
-            # Log the real error internally and let the global handler report a polite 500
-            logger.error(f"Internal registration error: {str(e)}")
-            raise e
+            err_msg = str(e).lower()
+            if "already registered" in err_msg or "already exists" in err_msg:
+                friendly_err = "This email is already registered. Please login or use another email."
+            elif "password" in err_msg and "short" in err_msg:
+                friendly_err = "Your password is too short. Please use at least 6 characters."
+            else:
+                friendly_err = "We couldn't create your account right now. Please try again later."
+            
+            logger.error(f"Registration error: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=friendly_err
+            )
 
     @staticmethod
     async def authenticate_user(login_in: LoginRequest) -> Dict[str, Any]:
