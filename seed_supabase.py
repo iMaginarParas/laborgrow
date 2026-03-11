@@ -16,9 +16,10 @@ def seed_marketplace_data():
 
     # 1. Seed Categories
     categories = [
-        {"name": "Plumbing", "slug": "plumbing", "icon_url": "https://cdn-icons-png.flaticon.com/512/3015/3015143.png"},
-        {"name": "Electrical", "slug": "electrical", "icon_url": "https://cdn-icons-png.flaticon.com/512/3105/3105807.png"},
-        {"name": "Cleaning", "slug": "cleaning", "icon_url": "https://cdn-icons-png.flaticon.com/512/2954/2954893.png"}
+        {"id": 1, "name": "General", "slug": "general", "emoji": "🛠️"},
+        {"id": 2, "name": "Plumbing", "slug": "plumbing", "emoji": "🪠"},
+        {"id": 3, "name": "Electrical", "slug": "electrical", "emoji": "⚡"},
+        {"id": 4, "name": "Cleaning", "slug": "cleaning", "emoji": "🧹"}
     ]
     try:
         public_supabase.table("categories").upsert(categories, on_conflict="slug").execute()

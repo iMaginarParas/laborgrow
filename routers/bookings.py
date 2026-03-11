@@ -20,13 +20,11 @@ async def create_booking(
     """
     try:
         return await BookingService.create_booking(booking_in, current_user)
+    except HTTPException:
+        raise
     except Exception as e:
-        if isinstance(e, HTTPException):
-            raise e
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Transaction processing failed: {str(e)}"
-        )
+        # Let the generic exception handler log the full traceback
+        raise e
 
 @router.get("", response_model=List[BookingResponse])
 async def list_customer_bookings(

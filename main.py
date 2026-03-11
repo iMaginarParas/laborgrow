@@ -63,9 +63,8 @@ async def log_requests(request: Request, call_next):
 # --- EXCEPTION HANDLERS ---
 
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(Exception, generic_exception_handler)
-# Note: HTTPException handler is added automatically by FastAPI, 
-# but we can override it if desired using the imported http_exception_handler.
 
 # --- ROUTE REGISTRATION (API V1) ---
 

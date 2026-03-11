@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from core.logger import logger
 import traceback
+from datetime import datetime
 
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """
@@ -28,6 +29,18 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             msg = first_error.get('msg', "Invalid information provided.")
     except Exception:
         msg = "Please fill in all required information."
+
+    # Emergency file logging for Antigravity visibility
+    full_traceback = traceback.format_exc()
+    try:
+        with open("c:/Users/Sunil/OneDrive/Desktop/laborgro/backend/error_log.txt", "a") as f:
+            f.write(f"\n--- VALIDATION ERROR {datetime.utcnow().isoformat()} ---\n")
+            f.write(f"Path: {request.url.path}\n")
+            f.write(f"Errors: {str(error_details)}\n")
+            f.write(full_traceback)
+            f.write("\n")
+    except:
+        pass
 
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -55,12 +68,24 @@ async def generic_exception_handler(request: Request, exc: Exception):
         friendly_msg = "Something went wrong on our end. We've been notified and are looking into it!"
         status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
 
+    full_traceback = traceback.format_exc()
     logger.error(
         "Internal Error", 
         path=request.url.path, 
         error=str(exc),
-        traceback=traceback.format_exc()
+        traceback=full_traceback
     )
+
+    # Emergency file logging for Antigravity visibility
+    try:
+        with open("c:/Users/Sunil/OneDrive/Desktop/laborgro/backend/error_log.txt", "a") as f:
+            f.write(f"\n--- {datetime.utcnow().isoformat()} ---\n")
+            f.write(f"Path: {request.url.path}\n")
+            f.write(f"Error: {str(exc)}\n")
+            f.write(full_traceback)
+            f.write("\n")
+    except:
+        pass
 
     return JSONResponse(
         status_code=status_code,
@@ -76,6 +101,17 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     """
     logger.warning("HTTP Issue", path=request.url.path, detail=exc.detail)
     
+    # Emergency file logging for Antigravity visibility
+    try:
+        with open("c:/Users/Sunil/OneDrive/Desktop/laborgro/backend/error_log.txt", "a") as f:
+            f.write(f"\n--- HTTP ISSUE {datetime.utcnow().isoformat()} ---\n")
+            f.write(f"Path: {request.url.path}\n")
+            f.write(f"Status: {exc.status_code}\n")
+            f.write(f"Detail: {exc.detail}\n")
+            f.write("\n")
+    except:
+        pass
+
     return JSONResponse(
         status_code=exc.status_code,
         content={

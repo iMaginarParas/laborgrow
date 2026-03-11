@@ -85,9 +85,26 @@ class BookingService:
             }
             
             insert_res = supabase.table("bookings").insert(new_booking_data).execute()
-            return await BookingService.get_booking_detail(insert_res.data[0]["id"])
+            
+            # 3. Retrieve hydrated booking
+            # Handle cases where insert might not return data directly depending on environment
+            booking_id = new_booking_data["id"]
+            hydrated_booking = await BookingService.get_booking_detail(booking_id)
+            
+            if not hydrated_booking:
+                # Fallback if DB hydration fails but insert succeeded
+                from services.worker_service import WorkerService
+                return {
+                    **new_booking_data,
+                    "worker": WorkerService._format_worker(worker),
+                    "created_at": datetime.now()
+                }
+                
+            return hydrated_booking
         except Exception as e:
-            if "schema cache" in str(e).lower() or "not found" in str(e).lower():
+            from core.logger import logger
+            logger.error(f"Booking creation failed: {str(e)}")
+            if "schema cache" in str(e).lower() or "not found" in str(e).lower() or "relation" in str(e).lower():
                  # Professional simulation for development
                  from services.worker_service import WorkerService
                  formatted_worker = WorkerService._format_worker(worker)
@@ -117,13 +134,25 @@ class BookingService:
         """
         Fetch booking with employee hydration.
         """
+        from services.worker_service import WorkerService
         try:
             result = supabase.table("bookings")\
                 .select("*, worker:employees(*)")\
                 .eq("id", str(booking_id))\
                 .execute()
-            return result.data[0] if result.data else None
-        except:
+            
+            if not result.data:
+                return None
+                
+            booking = result.data[0]
+            # Formats the flat 'worker' row into the nested structure expected by the app
+            if booking.get("worker"):
+                booking["worker"] = WorkerService._format_worker(booking["worker"])
+            
+            return booking
+        except Exception as e:
+            from core.logger import logger
+            logger.error(f"Error hydrating booking {booking_id}: {str(e)}")
             return None
 
     @staticmethod
@@ -139,7 +168,16 @@ class BookingService:
                 .eq("customer_id", str(customer_id))\
                 .order("created_at", desc=True)\
                 .execute()
-            return result.data or []
-        except:
+            
+            bookings = result.data or []
+            from services.worker_service import WorkerService
+            for b in bookings:
+                if b.get("worker"):
+                    b["worker"] = WorkerService._format_worker(b["worker"])
+            
+            return bookings
+        except Exception as e:
+            from core.logger import logger
+            logger.error(f"Error listing bookings for {customer_id}: {str(e)}")
             return []
 
