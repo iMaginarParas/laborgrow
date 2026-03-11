@@ -50,14 +50,15 @@ class BookingService:
         """
         Process a new booking transaction via Supabase.
         """
-        # 1. Fetch target worker details (from employees table)
-        worker_res = supabase.table("employees").select("*").eq("id", str(booking_in.worker_id)).single().execute()
-        worker = worker_res.data
-        if not worker:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Specified worker not found.")
-
-        # 2. Pricing and Persistence (Simulated if bookings table is missing)
         try:
+            # 1. Fetch target worker details (from employees table)
+            worker_id_str = str(booking_in.worker_id)
+            worker_res = supabase.table("employees").select("*").eq("id", worker_id_str).execute()
+            
+            if not worker_res.data:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Specified worker not found.")
+            
+            worker = worker_res.data[0]
             # Check for onboarding discount eligibility
             count_res = supabase.table("bookings").select("id", count="exact").eq("customer_id", current_user["id"]).execute()
             is_first = (count_res.count or 0) == 0
@@ -126,6 +127,10 @@ class BookingService:
                      "simulated": True
                  }
             raise e
+        except Exception as e:
+            from core.logger import logger
+            logger.error(f"Unexpected booking failure: {str(e)}")
+            raise e
 
     @staticmethod
     async def get_booking_detail(
@@ -170,12 +175,18 @@ class BookingService:
                 .execute()
             
             bookings = result.data or []
+            valid_bookings = []
             from services.worker_service import WorkerService
             for b in bookings:
                 if b.get("worker"):
                     b["worker"] = WorkerService._format_worker(b["worker"])
+                    valid_bookings.append(b)
+                else:
+                    # Log missing worker data but don't crash
+                    from core.logger import logger
+                    logger.warning(f"Booking {b.get('id')} is missing worker data. Skipping.")
             
-            return bookings
+            return valid_bookings
         except Exception as e:
             from core.logger import logger
             logger.error(f"Error listing bookings for {customer_id}: {str(e)}")
