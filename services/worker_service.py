@@ -16,22 +16,22 @@ class WorkerService:
         """
         return {
             "id": data.get("id"),
-            "bio": data.get("bio", ""),
-            "city": data.get("city", ""),
-            "lat": data.get("lat", 0.0),
-            "lng": data.get("lng", 0.0),
-            "experience_years": data.get("experience_years", 0),
-            "hourly_rate": data.get("hourly_rate", 500.0),
-            "rating": data.get("rating", 4.5),
-            "is_verified": data.get("is_verified", False),
-            "is_available": data.get("is_available", True),
+            "bio": data.get("bio") or "",
+            "city": data.get("city") or "",
+            "lat": data.get("lat") or 0.0,
+            "lng": data.get("lng") or 0.0,
+            "experience_years": data.get("experience_years") or 0,
+            "hourly_rate": data.get("hourly_rate") or 500.0,
+            "rating": data.get("rating") or 4.5,
+            "is_verified": data.get("is_verified") or False,
+            "is_available": data.get("is_available") if data.get("is_available") is not None else True,
             "user": {
                 "id": data.get("id"),
-                "name": data.get("full_name", "Worker"),
-                "email": data.get("email", ""),
-                "phone": data.get("phone", ""),
+                "name": data.get("full_name") or "Worker",
+                "email": data.get("email") or "",
+                "phone": data.get("phone") or "",
                 "profile_pic_url": data.get("profile_pic_url"),
-                "created_at": data.get("created_at")  # Pydantic will handle None if optional
+                "created_at": data.get("created_at")
             },
             # Fallback lists to prevent parsing errors
             "categories": data.get("categories") or [

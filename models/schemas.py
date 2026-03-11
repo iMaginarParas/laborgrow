@@ -50,18 +50,18 @@ class WorkerSkillBase(BaseModel):
 class WorkerBase(BaseModel):
     bio: Optional[str] = None
     city: str = ""
-    lat: float = 0.0
-    lng: float = 0.0
-    experience_years: int = 0
-    hourly_rate: float = 0.0
+    lat: Optional[float] = 0.0
+    lng: Optional[float] = 0.0
+    experience_years: Optional[int] = 0
+    hourly_rate: Optional[float] = 0.0
     min_hours: int = 1
 
 class WorkerResponse(WorkerBase):
     id: UUID
     user: UserResponse
-    is_verified: bool = False
-    is_available: bool = True
-    rating: float = 0.0
+    is_verified: Optional[bool] = False
+    is_available: Optional[bool] = True
+    rating: Optional[float] = 0.0
     categories: List[CategoryResponse] = []
     skills: List[WorkerSkillBase] = []
     class Config:
