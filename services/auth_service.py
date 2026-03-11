@@ -149,14 +149,18 @@ class AuthService:
         res = supabase.table("employees").select("*").eq("id", user_id).execute()
         if res.data:
             profile = res.data[0]
-            profile["name"] = profile.get("full_name")
+            profile["name"] = profile.get("full_name") or "Worker"
+            profile["phone"] = profile.get("phone") or "0000000000"
+            profile["city"] = profile.get("city") or ""
             return profile
         
         # Try employers
         res = supabase.table("employers").select("*").eq("id", user_id).execute()
         if res.data:
             profile = res.data[0]
-            profile["name"] = profile.get("company_name")
+            profile["name"] = profile.get("company_name") or "Customer"
+            profile["phone"] = profile.get("phone") or "0000000000"
+            profile["city"] = profile.get("city") or ""
             return profile
             
         return None
