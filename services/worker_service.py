@@ -18,8 +18,10 @@ class WorkerService:
             "id": data.get("id"),
             "bio": data.get("bio", ""),
             "city": data.get("city", ""),
-            "hourly_rate": data.get("hourly_rate", 500.0),
+            "lat": data.get("lat", 0.0),
+            "lng": data.get("lng", 0.0),
             "experience_years": data.get("experience_years", 0),
+            "hourly_rate": data.get("hourly_rate", 500.0),
             "rating": data.get("rating", 4.5),
             "is_verified": data.get("is_verified", False),
             "is_available": data.get("is_available", True),
@@ -28,13 +30,14 @@ class WorkerService:
                 "name": data.get("full_name", "Worker"),
                 "email": data.get("email", ""),
                 "phone": data.get("phone", ""),
-                "profile_pic_url": data.get("profile_pic_url")
+                "profile_pic_url": data.get("profile_pic_url"),
+                "created_at": data.get("created_at")  # Pydantic will handle None if optional
             },
             # Fallback lists to prevent parsing errors
-            "categories": data.get("categories", [
+            "categories": data.get("categories") or [
                 {"id": 1, "name": "General", "emoji": "🛠️", "slug": "general"}
-            ]),
-            "skills": data.get("skills", [])
+            ],
+            "skills": data.get("skills") or []
         }
 
     @staticmethod

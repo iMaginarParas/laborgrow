@@ -18,7 +18,7 @@ class UserCreate(UserBase):
 
 class UserResponse(UserBase):
     id: UUID
-    created_at: datetime
+    created_at: Optional[datetime] = None
     class Config:
         from_attributes = True
 
@@ -49,21 +49,21 @@ class WorkerSkillBase(BaseModel):
 
 class WorkerBase(BaseModel):
     bio: Optional[str] = None
-    city: str
-    lat: float
-    lng: float
-    experience_years: int
-    hourly_rate: float
+    city: str = ""
+    lat: float = 0.0
+    lng: float = 0.0
+    experience_years: int = 0
+    hourly_rate: float = 0.0
     min_hours: int = 1
 
 class WorkerResponse(WorkerBase):
     id: UUID
     user: UserResponse
-    is_verified: bool
-    is_available: bool
-    rating: float
-    categories: List[CategoryResponse]
-    skills: List[WorkerSkillBase]
+    is_verified: bool = False
+    is_available: bool = True
+    rating: float = 0.0
+    categories: List[CategoryResponse] = []
+    skills: List[WorkerSkillBase] = []
     class Config:
         from_attributes = True
 
