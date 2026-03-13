@@ -14,14 +14,15 @@ class WorkerService:
         Formats flat row from 'employees' table into the nested structure 
         expected by the Flutter app.
         """
+        work_details = data.get("work_details") or {}
         return {
             "id": data.get("id"),
-            "bio": data.get("bio") or "",
+            "bio": work_details.get("bio", data.get("bio") or ""),
             "city": data.get("city") or "",
             "lat": data.get("lat") or 0.0,
             "lng": data.get("lng") or 0.0,
-            "experience_years": data.get("experience_years") or 0,
-            "hourly_rate": data.get("hourly_rate") or 500.0,
+            "experience_years": work_details.get("experience_years", data.get("experience_years") or 0),
+            "hourly_rate": work_details.get("hourly_rate", data.get("hourly_rate") or 500.0),
             "rating": data.get("rating") or 4.5,
             "is_verified": data.get("is_verified") or False,
             "is_available": data.get("is_available") if data.get("is_available") is not None else True,
@@ -37,7 +38,7 @@ class WorkerService:
             "categories": data.get("categories") or [
                 {"id": 1, "name": "General", "emoji": "🛠️", "slug": "general"}
             ],
-            "skills": data.get("skills") or []
+            "skills": [{"skill_name": s} for s in (data.get("skills") or [])] if isinstance(data.get("skills"), list) else []
         }
 
     @staticmethod

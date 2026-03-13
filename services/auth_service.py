@@ -119,16 +119,35 @@ class AuthService:
         
         # 2. Map frontend field names to database columns
         db_updates = {}
+        work_details_updates = {}
+        
         if "name" in updates:
             db_updates["full_name" if is_employee else "company_name"] = updates["name"]
         if "phone" in updates:
             db_updates["phone"] = updates["phone"]
         if "city" in updates:
             db_updates["city"] = updates["city"]
-        if "bio" in updates:
-            db_updates["bio"] = updates["bio"]
         if "profile_pic_url" in updates:
             db_updates["profile_pic_url"] = updates["profile_pic_url"]
+
+        if is_employee:
+            if "skills" in updates:
+                db_updates["skills"] = updates["skills"]
+            if "bio" in updates:
+                work_details_updates["bio"] = updates["bio"]
+            if "experience_years" in updates:
+                work_details_updates["experience_years"] = updates["experience_years"]
+            if "hourly_rate" in updates:
+                work_details_updates["hourly_rate"] = updates["hourly_rate"]
+
+            if work_details_updates:
+                # Merge with existing work_details
+                existing = supabase.table("employees").select("work_details").eq("id", user_id).execute().data
+                existing_details = existing[0].get("work_details") if existing else {}
+                if not isinstance(existing_details, dict):
+                    existing_details = {}
+                existing_details.update(work_details_updates)
+                db_updates["work_details"] = existing_details
 
         if not db_updates:
             return await AuthService.get_user_profile(user_id)
