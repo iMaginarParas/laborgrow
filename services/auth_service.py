@@ -135,6 +135,8 @@ class AuthService:
                 db_updates["skills"] = updates["skills"]
             if "bio" in updates:
                 work_details_updates["bio"] = updates["bio"]
+            if "category_ids" in updates:
+                work_details_updates["category_ids"] = updates["category_ids"]
             if "experience_years" in updates:
                 work_details_updates["experience_years"] = updates["experience_years"]
             if "hourly_rate" in updates:

@@ -9,12 +9,28 @@ class WorkerService:
     """
 
     @staticmethod
-    def _format_worker(data: Dict[str, Any]) -> Dict[str, Any]:
+    def _format_worker(data: Dict[str, Any], categories_map: Dict[int, Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Formats flat row from 'employees' table into the nested structure 
         expected by the Flutter app.
         """
         work_details = data.get("work_details") or {}
+        
+        # Resolve categories from IDs in work_details
+        categories = []
+        if categories_map and "category_ids" in work_details:
+            cat_ids = work_details.get("category_ids", [])
+            if isinstance(cat_ids, list):
+                for cid in cat_ids:
+                    if cid in categories_map:
+                        categories.append(categories_map[cid])
+        
+        # Fallback to default if no categories found
+        if not categories:
+            categories = data.get("categories") or [
+                {"id": 1, "name": "General", "emoji": "🛠️", "slug": "general"}
+            ]
+
         return {
             "id": data.get("id"),
             "bio": work_details.get("bio", data.get("bio") or ""),
@@ -34,10 +50,7 @@ class WorkerService:
                 "profile_pic_url": data.get("profile_pic_url"),
                 "created_at": data.get("created_at")
             },
-            # Fallback lists to prevent parsing errors
-            "categories": data.get("categories") or [
-                {"id": 1, "name": "General", "emoji": "🛠️", "slug": "general"}
-            ],
+            "categories": categories,
             "skills": [{"skill_name": s} for s in (data.get("skills") or [])] if isinstance(data.get("skills"), list) else []
         }
 
@@ -51,18 +64,39 @@ class WorkerService:
         """
         Query the employees pool via Supabase.
         """
+        # Fetch categories for mapping
+        all_cats = await WorkerService.list_categories()
+        categories_map = {c['id']: c for c in all_cats}
+        
         query = supabase.table("employees").select("*")
         
         if min_rating:
             query = query.gte("rating", min_rating)
         
-        if max_price:
-            query = query.lte("hourly_rate", max_price)
-
+        # max_price filter might need adjustments if hourly_rate is in work_details
+        # For now, we query all and filter complex things in Python if needed
+        # but simple top-level columns are better
+            
         result = query.execute()
         workers = result.data or []
+        
+        formatted_workers = [WorkerService._format_worker(w, categories_map) for w in workers]
+        
+        # Filter by category slug in Python for now to support work_details JSON mapping
+        if category_slug:
+            formatted_workers = [
+                w for w in formatted_workers 
+                if any(cat['slug'] == category_slug for cat in w['categories'])
+            ]
             
-        return [WorkerService._format_worker(w) for w in workers]
+        # Filter by price in Python if hourly_rate is in work_details
+        if max_price:
+            formatted_workers = [
+                w for w in formatted_workers
+                if w['hourly_rate'] <= max_price
+            ]
+            
+        return formatted_workers
 
     @staticmethod
     async def get_worker_detail(
@@ -71,13 +105,17 @@ class WorkerService:
         """
         Fetch employee with profile metadata.
         """
+        # Fetch categories for mapping
+        all_cats = await WorkerService.list_categories()
+        categories_map = {c['id']: c for c in all_cats}
+
         result = supabase.table("employees")\
             .select("*")\
             .eq("id", str(worker_id))\
             .execute()
         
         if result.data:
-            return WorkerService._format_worker(result.data[0])
+            return WorkerService._format_worker(result.data[0], categories_map)
         return None
 
     @staticmethod

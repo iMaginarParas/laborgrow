@@ -19,7 +19,8 @@ def seed_marketplace_data():
         {"id": 1, "name": "General", "slug": "general", "emoji": "🛠️"},
         {"id": 2, "name": "Plumbing", "slug": "plumbing", "emoji": "🪠"},
         {"id": 3, "name": "Electrical", "slug": "electrical", "emoji": "⚡"},
-        {"id": 4, "name": "Cleaning", "slug": "cleaning", "emoji": "🧹"}
+        {"id": 4, "name": "Cleaning", "slug": "cleaning", "emoji": "🧹"},
+        {"id": 5, "name": "Painter", "slug": "painter", "emoji": "🎨"}
     ]
     try:
         public_supabase.table("categories").upsert(categories, on_conflict="slug").execute()
