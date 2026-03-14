@@ -16,9 +16,30 @@ class UserCreate(UserBase):
     password: str = Field(..., min_length=6, description="Password must be at least 6 characters")
     role: Optional[str] = "employee"
 
-class UserResponse(UserBase):
+class UserResponse(BaseModel):
+    """
+    Lenient response schema — DB rows may have blank/missing phone numbers
+    so we do not enforce min_length on output to avoid ResponseValidationError.
+    """
     id: UUID
+    name: str = "Worker"
+    email: str = ""
+    phone: str = ""
+    profile_pic_url: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
     created_at: Optional[datetime] = None
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def coerce_blank_name(cls, v):
+        return v if v and str(v).strip() else "Worker"
+
+    @field_validator("email", "phone", mode="before")
+    @classmethod
+    def coerce_none_to_str(cls, v):
+        return v if v is not None else ""
+
     class Config:
         from_attributes = True
 

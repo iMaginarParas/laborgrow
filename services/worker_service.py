@@ -1,5 +1,6 @@
 from typing import List, Optional, Dict, Any
 import uuid
+import json
 
 from repositories.worker_repository import WorkerRepository, CategoryRepository
 
@@ -17,7 +18,17 @@ class WorkerService:
         Formats flat row from 'employees' table into the nested structure 
         expected by the Flutter app.
         """
-        work_details = data.get("work_details") or {}
+        raw_work_details = data.get("work_details") or {}
+        # Supabase may return JSONB columns as a raw string in some envs — parse if needed
+        if isinstance(raw_work_details, str):
+            try:
+                work_details = json.loads(raw_work_details)
+            except (json.JSONDecodeError, ValueError):
+                work_details = {}
+        elif isinstance(raw_work_details, dict):
+            work_details = raw_work_details
+        else:
+            work_details = {}
         
         # Resolve categories from IDs in work_details
         categories = []

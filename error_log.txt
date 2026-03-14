@@ -12,3 +12,307 @@ Detail: Invalid credentials. Please check your email/phone and password.
 
 
 --- TEST WRITE ---
+
+--- 2026-03-14T20:00:01.953546 ---
+Path: /api/v1/workers
+Error: 'str' object has no attribute 'get'
+Traceback (most recent call last):
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 157, in call_next
+    message = await recv_stream.receive()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\anyio\streams\memory.py", line 98, in receive
+    return self.receive_nowait()
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\anyio\streams\memory.py", line 91, in receive_nowait
+    raise EndOfStream
+anyio.EndOfStream
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 187, in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\main.py", line 59, in log_requests
+    response: Response = await call_next(request)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
+    raise app_exc
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 85, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 715, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 735, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\routers\workers.py", line 24, in list_workers
+    return await WorkerService.list_workers(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\services\worker_service.py", line 77, in list_workers
+    formatted_workers = [WorkerService._format_worker(w, categories_map) for w in workers]
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\services\worker_service.py", line 25, in _format_worker
+    cat_ids = work_details.get("category_ids", [])
+              ^^^^^^^^^^^^^^^^
+AttributeError: 'str' object has no attribute 'get'
+
+
+--- 2026-03-14T20:01:46.275848 ---
+Path: /api/v1/workers
+Error: 'str' object has no attribute 'get'
+Traceback (most recent call last):
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 157, in call_next
+    message = await recv_stream.receive()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\anyio\streams\memory.py", line 98, in receive
+    return self.receive_nowait()
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\anyio\streams\memory.py", line 91, in receive_nowait
+    raise EndOfStream
+anyio.EndOfStream
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 187, in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\main.py", line 59, in log_requests
+    response: Response = await call_next(request)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
+    raise app_exc
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 85, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 715, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 735, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\routers\workers.py", line 24, in list_workers
+    return await WorkerService.list_workers(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\services\worker_service.py", line 77, in list_workers
+    is_active: bool = True
+                         ^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\services\worker_service.py", line 25, in _format_worker
+    work_details = json.loads(raw_work_details)
+          ^^^^^^^^^^^^^^^^
+AttributeError: 'str' object has no attribute 'get'
+
+
+--- 2026-03-14T20:02:48.837765 ---
+Path: /api/v1/workers
+Error: 7 validation errors:
+  {'type': 'string_too_short', 'loc': ('response', 0, 'user', 'name'), 'msg': 'String should have at least 2 characters', 'input': 'X', 'ctx': {'min_length': 2}}
+  {'type': 'string_too_short', 'loc': ('response', 0, 'user', 'phone'), 'msg': 'String should have at least 10 characters', 'input': '', 'ctx': {'min_length': 10}}
+  {'type': 'string_too_short', 'loc': ('response', 1, 'user', 'phone'), 'msg': 'String should have at least 10 characters', 'input': '', 'ctx': {'min_length': 10}}
+  {'type': 'string_too_short', 'loc': ('response', 2, 'user', 'phone'), 'msg': 'String should have at least 10 characters', 'input': '', 'ctx': {'min_length': 10}}
+  {'type': 'string_too_short', 'loc': ('response', 3, 'user', 'phone'), 'msg': 'String should have at least 10 characters', 'input': '', 'ctx': {'min_length': 10}}
+  {'type': 'string_too_short', 'loc': ('response', 4, 'user', 'phone'), 'msg': 'String should have at least 10 characters', 'input': '', 'ctx': {'min_length': 10}}
+  {'type': 'string_too_short', 'loc': ('response', 5, 'user', 'phone'), 'msg': 'String should have at least 10 characters', 'input': '', 'ctx': {'min_length': 10}}
+
+Traceback (most recent call last):
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 157, in call_next
+    message = await recv_stream.receive()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\anyio\streams\memory.py", line 98, in receive
+    return self.receive_nowait()
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\anyio\streams\memory.py", line 91, in receive_nowait
+    raise EndOfStream
+anyio.EndOfStream
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 187, in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\main.py", line 59, in log_requests
+    response: Response = await call_next(request)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
+    raise app_exc
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 85, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 715, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 735, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\fastapi\routing.py", line 327, in app
+    content = await serialize_response(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\fastapi\routing.py", line 176, in serialize_response
+    raise ResponseValidationError(
+fastapi.exceptions.ResponseValidationError: 7 validation errors:
+  {'type': 'string_too_short', 'loc': ('response', 0, 'user', 'name'), 'msg': 'String should have at least 2 characters', 'input': 'X', 'ctx': {'min_length': 2}}
+  {'type': 'string_too_short', 'loc': ('response', 0, 'user', 'phone'), 'msg': 'String should have at least 10 characters', 'input': '', 'ctx': {'min_length': 10}}
+  {'type': 'string_too_short', 'loc': ('response', 1, 'user', 'phone'), 'msg': 'String should have at least 10 characters', 'input': '', 'ctx': {'min_length': 10}}
+  {'type': 'string_too_short', 'loc': ('response', 2, 'user', 'phone'), 'msg': 'String should have at least 10 characters', 'input': '', 'ctx': {'min_length': 10}}
+  {'type': 'string_too_short', 'loc': ('response', 3, 'user', 'phone'), 'msg': 'String should have at least 10 characters', 'input': '', 'ctx': {'min_length': 10}}
+  {'type': 'string_too_short', 'loc': ('response', 4, 'user', 'phone'), 'msg': 'String should have at least 10 characters', 'input': '', 'ctx': {'min_length': 10}}
+  {'type': 'string_too_short', 'loc': ('response', 5, 'user', 'phone'), 'msg': 'String should have at least 10 characters', 'input': '', 'ctx': {'min_length': 10}}
+
+
+
+--- 2026-03-14T20:04:44.110108 ---
+Path: /api/v1/workers
+Error: 7 validation errors:
+  {'type': 'string_too_short', 'loc': ('response', 0, 'user', 'name'), 'msg': 'String should have at least 2 characters', 'input': 'X', 'ctx': {'min_length': 2}}
+  {'type': 'string_too_short', 'loc': ('response', 0, 'user', 'phone'), 'msg': 'String should have at least 10 characters', 'input': '', 'ctx': {'min_length': 10}}
+  {'type': 'string_too_short', 'loc': ('response', 1, 'user', 'phone'), 'msg': 'String should have at least 10 characters', 'input': '', 'ctx': {'min_length': 10}}
+  {'type': 'string_too_short', 'loc': ('response', 2, 'user', 'phone'), 'msg': 'String should have at least 10 characters', 'input': '', 'ctx': {'min_length': 10}}
+  {'type': 'string_too_short', 'loc': ('response', 3, 'user', 'phone'), 'msg': 'String should have at least 10 characters', 'input': '', 'ctx': {'min_length': 10}}
+  {'type': 'string_too_short', 'loc': ('response', 4, 'user', 'phone'), 'msg': 'String should have at least 10 characters', 'input': '', 'ctx': {'min_length': 10}}
+  {'type': 'string_too_short', 'loc': ('response', 5, 'user', 'phone'), 'msg': 'String should have at least 10 characters', 'input': '', 'ctx': {'min_length': 10}}
+
+Traceback (most recent call last):
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 157, in call_next
+    message = await recv_stream.receive()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\anyio\streams\memory.py", line 98, in receive
+    return self.receive_nowait()
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\anyio\streams\memory.py", line 91, in receive_nowait
+    raise EndOfStream
+anyio.EndOfStream
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 187, in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\main.py", line 59, in log_requests
+    response: Response = await call_next(request)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
+    raise app_exc
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 85, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 715, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 735, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\fastapi\routing.py", line 327, in app
+    content = await serialize_response(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\fastapi\routing.py", line 176, in serialize_response
+    raise ResponseValidationError(
+fastapi.exceptions.ResponseValidationError: 7 validation errors:
+  {'type': 'string_too_short', 'loc': ('response', 0, 'user', 'name'), 'msg': 'String should have at least 2 characters', 'input': 'X', 'ctx': {'min_length': 2}}
+  {'type': 'string_too_short', 'loc': ('response', 0, 'user', 'phone'), 'msg': 'String should have at least 10 characters', 'input': '', 'ctx': {'min_length': 10}}
+  {'type': 'string_too_short', 'loc': ('response', 1, 'user', 'phone'), 'msg': 'String should have at least 10 characters', 'input': '', 'ctx': {'min_length': 10}}
+  {'type': 'string_too_short', 'loc': ('response', 2, 'user', 'phone'), 'msg': 'String should have at least 10 characters', 'input': '', 'ctx': {'min_length': 10}}
+  {'type': 'string_too_short', 'loc': ('response', 3, 'user', 'phone'), 'msg': 'String should have at least 10 characters', 'input': '', 'ctx': {'min_length': 10}}
+  {'type': 'string_too_short', 'loc': ('response', 4, 'user', 'phone'), 'msg': 'String should have at least 10 characters', 'input': '', 'ctx': {'min_length': 10}}
+  {'type': 'string_too_short', 'loc': ('response', 5, 'user', 'phone'), 'msg': 'String should have at least 10 characters', 'input': '', 'ctx': {'min_length': 10}}
+
+
+
+--- HTTP ISSUE 2026-03-14T20:09:14.384444 ---
+Path: /api/v1/auth/login
+Status: 401
+Detail: Invalid credentials. Please check your email/phone and password.
+
+
+--- HTTP ISSUE 2026-03-14T20:11:22.140779 ---
+Path: /api/v1/auth/me
+Status: 401
+Detail: Session has expired or is invalid. Please login again.
+
