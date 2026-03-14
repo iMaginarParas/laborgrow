@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 import time
 import uvicorn
+import os
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 # Strategic Production Imports
 from config.settings import settings
@@ -72,7 +74,7 @@ async def log_requests(request: Request, call_next):
 # --- EXCEPTION HANDLERS ---
 
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
-app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
 app.add_exception_handler(Exception, generic_exception_handler)
 
 # --- ROUTE REGISTRATION (API V1) ---
@@ -101,4 +103,5 @@ async def health():
     return {"status": "online"}
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
