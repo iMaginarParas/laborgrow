@@ -19,9 +19,9 @@ class AuthService:
         Coordinate user registration.
         """
         try:
-            client = await get_supabase()
+            client = get_supabase()
             # 1. Sign up with Supabase Auth
-            auth_response = await client.auth.sign_up({
+            auth_response = client.auth.sign_up({
                 "email": user_in.email,
                 "password": user_in.password,
                 "options": {
@@ -55,7 +55,7 @@ class AuthService:
                 user_data["phone"] = user_in.phone
                 user_data["city"] = user_in.city
             
-            profile = await AuthService._user_repo.update_profile(auth_response.user.id, table_name, user_data)
+            profile = AuthService._user_repo.update_profile(auth_response.user.id, table_name, user_data)
             
             return {
                 "user_id": str(auth_response.user.id),
@@ -85,7 +85,7 @@ class AuthService:
         Validate credentials via Supabase Auth.
         """
         try:
-            client = await get_supabase()
+            client = get_supabase()
             identifier = login_in.phone_or_email.strip()
             if "@" in identifier:
                 auth_data = {"email": identifier, "password": login_in.password}
@@ -96,7 +96,7 @@ class AuthService:
                     phone_number = f"+91{phone_number}"
                 auth_data = {"phone": phone_number, "password": login_in.password}
             
-            response = await client.auth.sign_in_with_password(auth_data)
+            response = client.auth.sign_in_with_password(auth_data)
             
             return {
                 "access_token": response.session.access_token,
@@ -116,7 +116,7 @@ class AuthService:
         """
         Identify user role and apply updates.
         """
-        current_profile = await AuthService._user_repo.find_profile(user_id)
+        current_profile = AuthService._user_repo.find_profile(user_id)
         if not current_profile:
             return None
             
@@ -160,7 +160,7 @@ class AuthService:
             return await AuthService.get_user_profile(user_id)
 
         # Apply updates
-        result = await AuthService._user_repo.update_profile(user_id, table_name, db_updates)
+        result = AuthService._user_repo.update_profile(user_id, table_name, db_updates)
         
         if result:
             return await AuthService.get_user_profile(user_id)
@@ -171,7 +171,7 @@ class AuthService:
         """
         Unified profile retriever.
         """
-        profile = await AuthService._user_repo.find_profile(user_id)
+        profile = AuthService._user_repo.find_profile(user_id)
         if profile:
             role = profile.get("role")
             profile["name"] = profile.get("full_name") or profile.get("company_name") or (

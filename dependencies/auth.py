@@ -16,9 +16,9 @@ async def get_current_user(
     """
     token = credentials.credentials
     try:
-        client = await get_supabase()
+        client = get_supabase()
         # Validate the token with Supabase Auth
-        user_response = await client.auth.get_user(token)
+        user_response = client.auth.get_user(token)
         
         if not user_response.user:
             raise HTTPException(

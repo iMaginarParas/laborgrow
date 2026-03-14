@@ -35,7 +35,7 @@ async def startup_event():
     """
     Bootstrap the application resources.
     """
-    await init_supabase()
+    init_supabase()
     logger.info("Application bootstrap complete", status="ready")
 
 # --- MIDDLEWARE STACK ---

@@ -1,34 +1,41 @@
-from config.settings import settings
-from supabase import create_async_client, AsyncClient
 import os
+from supabase import create_client, Client
+from config.settings import settings
 
-# Global singleton for the async client
-supabase: AsyncClient = None
+# Global singleton — initialised once at startup
+supabase: Client = None
 
-async def init_supabase():
+def init_supabase() -> Client:
     """
-    Initialize the global async Supabase client.
-    Called once during application startup.
+    Initialise the global synchronous Supabase client.
+    Called once during application startup via the lifespan event.
+    Uses Service Role Key for privileged backend operations.
     """
     global supabase
     if supabase:
         return supabase
 
     url = settings.SUPABASE_URL or os.environ.get("SUPABASE_URL")
-    key = settings.SUPABASE_SERVICE_ROLE_KEY or settings.SUPABASE_KEY or os.environ.get("SUPABASE_KEY")
+    key = (
+        settings.SUPABASE_SERVICE_ROLE_KEY
+        or settings.SUPABASE_KEY
+        or os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+        or os.environ.get("SUPABASE_KEY")
+    )
 
     if not url or not key:
-        raise RuntimeError("Supabase configuration missing (URL or Key)")
+        raise RuntimeError("Supabase configuration missing (URL or Key). Check environment variables.")
 
-    supabase = await create_async_client(url, key)
+    supabase = create_client(url, key)
     return supabase
 
-async def get_supabase() -> AsyncClient:
+def get_supabase() -> Client:
     """
-    FastAPI dependency yielding the Supabase client.
-    Ensures the client is initialized.
+    Returns the initialised Supabase client.
+    Raises RuntimeError if init_supabase() has not been called yet.
     """
     if not supabase:
-        await init_supabase()
+        # Fallback: initialise on first use in case startup hook was skipped
+        return init_supabase()
     return supabase
 
