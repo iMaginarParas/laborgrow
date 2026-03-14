@@ -10,6 +10,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     Handle data validation errors (Pydantic) with a friendly summary.
     """
     error_details = exc.errors()
+    print(f"DEBUG: Validation Errors at {request.url.path}: {error_details}")
     logger.error("Validation error", path=request.url.path, errors=error_details)
     
     # Try to get the first specific error message
@@ -18,13 +19,13 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         field_name = str(first_error['loc'][-1]).replace('_', ' ').capitalize()
         error_type = first_error['type']
         
-        if error_type == 'value_error.missing':
+        if error_type == 'value_error.missing' or error_type == 'missing':
             msg = f"{field_name} is required."
-        elif 'min_length' in error_type:
-            limit = first_error.get('ctx', {}).get('limit_value', '?')
+        elif 'min_length' in error_type or 'too_short' in error_type:
+            limit = first_error.get('ctx', {}).get('limit_value') or first_error.get('ctx', {}).get('min_length', '?')
             msg = f"{field_name} must be at least {limit} characters long."
-        elif error_type == 'value_error.email':
-            msg = "Please provide a valid email address."
+        elif error_type == 'value_error.email' or error_type == 'greater_than':
+            msg = "Please provide valid information."
         else:
             msg = first_error.get('msg', "Invalid information provided.")
     except Exception:
@@ -46,8 +47,8 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={
             "status": "error",
-            "message": msg,
-            "detail": "Data verification failed."
+            "message": "Data verification failed.",
+            "detail": msg
         }
     )
 

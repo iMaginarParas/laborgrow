@@ -1,0 +1,14 @@
+
+--- HTTP ISSUE 2026-03-13T20:01:16.252494 ---
+Path: /api/v1/auth/login
+Status: 401
+Detail: Invalid credentials. Please check your email/phone and password.
+
+
+--- HTTP ISSUE 2026-03-13T20:01:36.081543 ---
+Path: /api/v1/auth/login
+Status: 401
+Detail: Invalid credentials. Please check your email/phone and password.
+
+
+--- TEST WRITE ---
