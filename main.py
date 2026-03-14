@@ -7,6 +7,7 @@ import uvicorn
 # Strategic Production Imports
 from config.settings import settings
 from core.logger import logger
+from database import init_supabase
 from core.error_handler import (
     validation_exception_handler,
     generic_exception_handler,
@@ -28,6 +29,14 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+@app.on_event("startup")
+async def startup_event():
+    """
+    Bootstrap the application resources.
+    """
+    await init_supabase()
+    logger.info("Application bootstrap complete", status="ready")
 
 # --- MIDDLEWARE STACK ---
 

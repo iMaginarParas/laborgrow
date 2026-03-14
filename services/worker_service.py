@@ -1,12 +1,15 @@
 from typing import List, Optional, Dict, Any
 import uuid
 
-from database import supabase
+from repositories.worker_repository import WorkerRepository, CategoryRepository
 
 class WorkerService:
     """
-    Coordinator for the supply-side of the marketplace (Workers/Categories) using Supabase.
+    Coordinator for the supply-side of the marketplace (Workers/Categories).
+    De-coupled from direct DB access via Repositories.
     """
+    _worker_repo = WorkerRepository()
+    _category_repo = CategoryRepository()
 
     @staticmethod
     def _format_worker(data: Dict[str, Any], categories_map: Dict[int, Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -42,6 +45,7 @@ class WorkerService:
             "rating": data.get("rating") or 4.5,
             "is_verified": data.get("is_verified") or False,
             "is_available": data.get("is_available") if data.get("is_available") is not None else True,
+            "min_hours": work_details.get("min_hours", data.get("min_hours") or 1),
             "user": {
                 "id": data.get("id"),
                 "name": data.get("full_name") or "Worker",
@@ -62,23 +66,13 @@ class WorkerService:
         is_active: bool = True
     ) -> List[Dict[str, Any]]:
         """
-        Query the employees pool via Supabase.
+        Query the employees pool with business logic filtering.
         """
         # Fetch categories for mapping
         all_cats = await WorkerService.list_categories()
         categories_map = {c['id']: c for c in all_cats}
         
-        query = supabase.table("employees").select("*")
-        
-        if min_rating:
-            query = query.gte("rating", min_rating)
-        
-        # max_price filter might need adjustments if hourly_rate is in work_details
-        # For now, we query all and filter complex things in Python if needed
-        # but simple top-level columns are better
-            
-        result = query.execute()
-        workers = result.data or []
+        workers = await WorkerService._worker_repo.list_active_workers(min_rating=min_rating)
         
         formatted_workers = [WorkerService._format_worker(w, categories_map) for w in workers]
         
@@ -103,29 +97,25 @@ class WorkerService:
         worker_id: uuid.UUID
     ) -> Optional[Dict[str, Any]]:
         """
-        Fetch employee with profile metadata.
+        Fetch employee with profile metadata formatted for the frontend.
         """
         # Fetch categories for mapping
         all_cats = await WorkerService.list_categories()
         categories_map = {c['id']: c for c in all_cats}
 
-        result = supabase.table("employees")\
-            .select("*")\
-            .eq("id", str(worker_id))\
-            .execute()
+        data = await WorkerService._worker_repo.find_by_id(worker_id)
         
-        if result.data:
-            return WorkerService._format_worker(result.data[0], categories_map)
+        if data:
+            return WorkerService._format_worker(data, categories_map)
         return None
 
     @staticmethod
     async def list_categories() -> List[Dict[str, Any]]:
         """
-        Retrieve all marketplace service categories (Returns empty list if missing).
+        Retrieve all marketplace service categories.
         """
         try:
-            result = supabase.table("categories").select("*").execute()
-            return result.data or []
-        except:
+            return await WorkerService._category_repo.list_all()
+        except Exception:
              return []
 

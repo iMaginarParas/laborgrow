@@ -4,13 +4,17 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional
 from fastapi import HTTPException, status
 
-from database import supabase
 from models.schemas import BookingCreate
+from repositories.booking_repository import BookingRepository
+from repositories.worker_repository import WorkerRepository
 
 class BookingService:
     """
-    Business logic coordinator for the booking lifecycle using Supabase.
+    Business logic coordinator for the booking lifecycle.
+    Separated from DB concerns via Repositories.
     """
+    _booking_repo = BookingRepository()
+    _worker_repo = WorkerRepository()
 
     @staticmethod
     def calculate_pricing(
@@ -48,20 +52,19 @@ class BookingService:
         current_user: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Process a new booking transaction via Supabase.
+        Process a new booking transaction.
         """
+        worker = None
         try:
-            # 1. Fetch target worker details (from employees table)
-            worker_id_str = str(booking_in.worker_id)
-            worker_res = supabase.table("employees").select("*").eq("id", worker_id_str).execute()
+            # 1. Fetch target worker details
+            worker = await BookingService._worker_repo.find_by_id(booking_in.worker_id)
             
-            if not worker_res.data:
+            if not worker:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Specified worker not found.")
             
-            worker = worker_res.data[0]
             # Check for onboarding discount eligibility
-            count_res = supabase.table("bookings").select("id", count="exact").eq("customer_id", current_user["id"]).execute()
-            is_first = (count_res.count or 0) == 0
+            booking_count = await BookingService._booking_repo.count_by_customer(current_user["id"])
+            is_first = booking_count == 0
             
             pricing = BookingService.calculate_pricing(
                 hourly_rate=worker.get("hourly_rate", 500.0), # Default if missing
@@ -85,15 +88,12 @@ class BookingService:
                 "status": "pending"
             }
             
-            insert_res = supabase.table("bookings").insert(new_booking_data).execute()
+            await BookingService._booking_repo.insert(new_booking_data)
             
             # 3. Retrieve hydrated booking
-            # Handle cases where insert might not return data directly depending on environment
-            booking_id = new_booking_data["id"]
-            hydrated_booking = await BookingService.get_booking_detail(booking_id)
+            hydrated_booking = await BookingService.get_booking_detail(new_booking_data["id"])
             
             if not hydrated_booking:
-                # Fallback if DB hydration fails but insert succeeded
                 from services.worker_service import WorkerService
                 return {
                     **new_booking_data,
@@ -102,11 +102,13 @@ class BookingService:
                 }
                 
             return hydrated_booking
+
         except Exception as e:
             from core.logger import logger
-            logger.error(f"Booking creation failed: {str(e)}")
-            if "schema cache" in str(e).lower() or "not found" in str(e).lower() or "relation" in str(e).lower():
-                 # Professional simulation for development
+            logger.error(f"Booking flow issue: {str(e)}")
+            
+            # Fallback logic for development resilience
+            if worker and ("schema cache" in str(e).lower() or "not found" in str(e).lower() or "relation" in str(e).lower()):
                  from services.worker_service import WorkerService
                  formatted_worker = WorkerService._format_worker(worker)
                  
@@ -117,7 +119,7 @@ class BookingService:
                      "time_slot": booking_in.time_slot,
                      "hours": booking_in.hours,
                      "address": booking_in.address,
-                     "total_amount": 550.0, # Estimated default (500 rate + 50 fee)
+                     "total_amount": 550.0,
                      "platform_fee": 50.0,
                      "discount_amount": 0.0,
                      "status": "pending",
@@ -126,10 +128,6 @@ class BookingService:
                      "message": "Booking received! Our team will contact you shortly.", 
                      "simulated": True
                  }
-            raise e
-        except Exception as e:
-            from core.logger import logger
-            logger.error(f"Unexpected booking failure: {str(e)}")
             raise e
 
     @staticmethod
@@ -141,16 +139,11 @@ class BookingService:
         """
         from services.worker_service import WorkerService
         try:
-            result = supabase.table("bookings")\
-                .select("*, worker:employees(*)")\
-                .eq("id", str(booking_id))\
-                .execute()
+            booking = await BookingService._booking_repo.find_with_worker(booking_id)
             
-            if not result.data:
+            if not booking:
                 return None
                 
-            booking = result.data[0]
-            # Formats the flat 'worker' row into the nested structure expected by the app
             if booking.get("worker"):
                 booking["worker"] = WorkerService._format_worker(booking["worker"])
             
@@ -165,16 +158,11 @@ class BookingService:
         customer_id: str
     ) -> List[Dict[str, Any]]:
         """
-        Retrieve history from Supabase (graceful fail if missing).
+        Retrieve history for the authorized user.
         """
         try:
-            result = supabase.table("bookings")\
-                .select("*, worker:employees(*)")\
-                .eq("customer_id", str(customer_id))\
-                .order("created_at", desc=True)\
-                .execute()
+            bookings = await BookingService._booking_repo.list_by_customer(customer_id)
             
-            bookings = result.data or []
             valid_bookings = []
             from services.worker_service import WorkerService
             for b in bookings:
@@ -182,7 +170,6 @@ class BookingService:
                     b["worker"] = WorkerService._format_worker(b["worker"])
                     valid_bookings.append(b)
                 else:
-                    # Log missing worker data but don't crash
                     from core.logger import logger
                     logger.warning(f"Booking {b.get('id')} is missing worker data. Skipping.")
             

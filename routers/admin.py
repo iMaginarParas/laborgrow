@@ -2,10 +2,17 @@ from fastapi import APIRouter, Depends, HTTPException, Header, Query, status
 from typing import Dict, Any, Optional
 from pydantic import BaseModel, EmailStr
 
-from database import supabase
 from config.settings import settings
+from repositories.worker_repository import WorkerRepository
+from repositories.job_repository import JobRepository
+from repositories.booking_repository import BookingRepository
 
 router = APIRouter(prefix="/admin", tags=["Administrator Operations"])
+
+# Repositories
+_worker_repo = WorkerRepository()
+_job_repo = JobRepository()
+_booking_repo = BookingRepository()
 
 # ── Auth Dependency ────────────────────────────────────────────────────────────
 
@@ -29,30 +36,23 @@ class AdminJobUpdate(BaseModel):
 @router.get("/dashboard", dependencies=[Depends(require_admin)])
 async def admin_dashboard():
     """
-    Marketplace overview — statistics and recent activity from Supabase.
+    Marketplace overview — statistics and recent activity.
     """
     try:
-        total_jobs         = supabase.table("jobs").select("id", count="exact").execute()
-        total_bookings     = supabase.table("bookings").select("id", count="exact").execute()
-        # Use employees table as it's the primary user entity in our schema
-        total_users        = supabase.table("employees").select("id", count="exact").execute()
+        total_jobs = await _job_repo.count_all()
+        total_bookings = await _booking_repo.count_all()
+        total_users = await _worker_repo.count_all()
 
-        recent_jobs = (
-            supabase.table("jobs")
-            .select("id, title, job_city, created_at") # Company name might be missing in simple schema
-            .order("created_at", desc=True)
-            .limit(5)
-            .execute()
-        )
+        recent_jobs = await _job_repo.list_recent(limit=5)
 
         return {
             "status": "success",
             "stats": {
-                "total_jobs":         total_jobs.count or 0,
-                "total_bookings":     total_bookings.count or 0,
-                "total_users":        total_users.count or 0,
+                "total_jobs":         total_jobs,
+                "total_bookings":     total_bookings,
+                "total_users":        total_users,
             },
-            "recent_jobs": recent_jobs.data or [],
+            "recent_jobs": recent_jobs,
         }
     except Exception as e:
         raise e
@@ -65,8 +65,8 @@ async def approve_worker(
     Approve a newly registered worker for inclusion in the marketplace.
     """
     try:
-        res = supabase.table("employees").update({"is_verified": True}).eq("id", worker_id).execute()
-        if not res.data:
+        res = await _worker_repo.update(worker_id, {"is_verified": True})
+        if not res:
              raise HTTPException(status_code=404, detail="Worker record not found.")
         return {"message": "Worker successfully approved."}
     except Exception as e:

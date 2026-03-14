@@ -2,7 +2,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Dict, Any
 
-from database import supabase
+from database import get_supabase
 
 # Using HTTPBearer to support standard Bearer token headers from Flutter/Client
 security = HTTPBearer()
@@ -16,8 +16,9 @@ async def get_current_user(
     """
     token = credentials.credentials
     try:
+        client = await get_supabase()
         # Validate the token with Supabase Auth
-        user_response = supabase.auth.get_user(token)
+        user_response = await client.auth.get_user(token)
         
         if not user_response.user:
             raise HTTPException(
