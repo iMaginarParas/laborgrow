@@ -9,10 +9,20 @@ class WorkerRepository(BaseRepository):
         result = self.get_client().table(self.table_name).select("id", count="exact").execute()
         return result.count or 0
 
-    async def list_active_workers(self, min_rating: float = 0.0) -> List[Dict[str, Any]]:
+    async def list_active_workers(
+        self, 
+        min_rating: float = 0.0, 
+        city: Optional[str] = None,
+        is_available: Optional[bool] = None
+    ) -> List[Dict[str, Any]]:
         query = self.get_client().table(self.table_name).select("*")
         if min_rating > 0:
             query = query.gte("rating", min_rating)
+        if city:
+            query = query.ilike("city", f"%{city}%")
+        if is_available is not None:
+            query = query.eq("is_available", is_available)
+        
         result = query.execute()
         return result.data or []
 

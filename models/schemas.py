@@ -127,7 +127,7 @@ class BookingResponse(BaseModel):
 
 # --- REVIEW SCHEMAS ---
 class ReviewCreate(BaseModel):
-    booking_id: UUID
+    worker_id: UUID
     rating: int = Field(..., ge=1, le=5)
     comment: Optional[str] = None
 
@@ -135,5 +135,41 @@ class ReviewResponse(ReviewCreate):
     id: UUID
     customer: UserResponse
     created_at: datetime
+    class Config:
+        from_attributes = True
+
+# --- JOB SCHEMAS ---
+class JobCreate(BaseModel):
+    title: str = Field(..., min_length=5, max_length=100)
+    description: str = Field(..., min_length=10)
+    category_id: int
+    job_city: str
+    salary_min: Optional[float] = 0.0
+    salary_max: Optional[float] = 0.0
+    lat: Optional[float] = 0.0
+    lng: Optional[float] = 0.0
+    openings: Optional[int] = 1
+
+class JobResponse(JobCreate):
+    id: UUID
+    employer_id: UUID
+    status: str = "open"
+    created_at: datetime
+    category: Optional[CategoryResponse] = None
+    class Config:
+        from_attributes = True
+
+# --- JOB APPLICATION SCHEMAS ---
+class ApplicationCreate(BaseModel):
+    job_id: UUID
+
+class ApplicationResponse(BaseModel):
+    id: UUID
+    job_id: UUID
+    worker_id: UUID
+    status: str # pending, accepted, rejected
+    created_at: datetime
+    worker: Optional[WorkerResponse] = None
+    job: Optional[JobResponse] = None
     class Config:
         from_attributes = True

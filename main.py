@@ -21,7 +21,12 @@ from routers import (
     categories_router,
     bookings_router,
     jobs_router,
-    admin_router
+    admin_router,
+    applications_router,
+    reviews_router,
+    hire_router,
+    worker_dashboard_router,
+    notifications_router
 )
 
 # Application Initialization
@@ -46,7 +51,7 @@ async def startup_event():
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False, # Credentials can't be used with * origin
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -86,6 +91,11 @@ app.include_router(categories_router, prefix=f"{settings.API_V1_STR}")
 app.include_router(bookings_router, prefix=f"{settings.API_V1_STR}")
 app.include_router(jobs_router, prefix=f"{settings.API_V1_STR}")
 app.include_router(admin_router, prefix=f"{settings.API_V1_STR}")
+app.include_router(applications_router, prefix=f"{settings.API_V1_STR}")
+app.include_router(reviews_router, prefix=f"{settings.API_V1_STR}")
+app.include_router(hire_router, prefix=f"{settings.API_V1_STR}")
+app.include_router(worker_dashboard_router, prefix=f"{settings.API_V1_STR}")
+app.include_router(notifications_router, prefix=f"{settings.API_V1_STR}")
 
 @app.get("/")
 async def root():

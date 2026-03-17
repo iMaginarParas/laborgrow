@@ -74,7 +74,9 @@ class WorkerService:
         category_slug: Optional[str] = None,
         min_rating: float = 0.0,
         max_price: Optional[float] = None,
-        is_active: bool = True
+        city: Optional[str] = None,
+        is_available: Optional[bool] = None,
+        search: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
         Query the employees pool with business logic filtering.
@@ -83,7 +85,11 @@ class WorkerService:
         all_cats = await WorkerService.list_categories()
         categories_map = {c['id']: c for c in all_cats}
         
-        workers = await WorkerService._worker_repo.list_active_workers(min_rating=min_rating)
+        workers = await WorkerService._worker_repo.list_active_workers(
+            min_rating=min_rating,
+            city=city,
+            is_available=is_available
+        )
         
         formatted_workers = [WorkerService._format_worker(w, categories_map) for w in workers]
         
@@ -99,6 +105,16 @@ class WorkerService:
             formatted_workers = [
                 w for w in formatted_workers
                 if w['hourly_rate'] <= max_price
+            ]
+            
+        # Filter by search keyword (name or skills)
+        if search:
+            search = search.lower()
+            formatted_workers = [
+                w for w in formatted_workers
+                if search in (w['user']['name'] or "").lower() or 
+                   any(search in s['skill_name'].lower() for s in w['skills']) or
+                   any(search in c['name'].lower() for c in w['categories'])
             ]
             
         return formatted_workers

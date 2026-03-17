@@ -7,6 +7,7 @@ from fastapi import HTTPException, status
 from models.schemas import BookingCreate
 from repositories.booking_repository import BookingRepository
 from repositories.worker_repository import WorkerRepository
+from services.notification_service import NotificationService
 
 class BookingService:
     """
@@ -89,6 +90,14 @@ class BookingService:
             }
             
             await BookingService._booking_repo.insert(new_booking_data)
+            
+            # Send notification to the worker
+            await NotificationService.create_notification(
+                user_id=str(booking_in.worker_id),
+                title="New Booking Received!",
+                message=f"You have a new booking for {booking_in.booking_date} at {booking_in.time_slot}. Check your dashboard.",
+                type="booking"
+            )
             
             # 3. Retrieve hydrated booking
             hydrated_booking = await BookingService.get_booking_detail(new_booking_data["id"])

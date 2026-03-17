@@ -16,13 +16,16 @@ async def list_workers(
     lng: Optional[float] = Query(None, description="Supply search longitude"),
     radius: Optional[float] = Query(10.0, description="Radial distance limit"),
     min_rating: float = Query(0.0, description="Minimum star rating filter"),
-    max_price: Optional[float] = Query(None, description="Maximum cost per hour filter")
+    max_price: Optional[float] = Query(None, description="Maximum cost per hour filter"),
+    city: Optional[str] = Query(None, description="Filter by city name"),
+    available: Optional[bool] = Query(None, description="Filter by availability"),
+    search: Optional[str] = Query(None, description="Search by name, skill, or category")
 ) -> List[WorkerResponse]:
     """
     Explore available service providers on the LaborGrow marketplace using Supabase.
     """
     return await WorkerService.list_workers(
-        category, min_rating, max_price
+        category, min_rating, max_price, city, available, search
     )
 
 @router.get("/{worker_id}", response_model=WorkerResponse)

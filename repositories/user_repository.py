@@ -26,5 +26,7 @@ class UserRepository:
 
     def update_profile(self, user_id: str, table_name: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         client = get_supabase()
-        result = client.table(table_name).update(updates).eq("id", user_id).execute()
+        # Use upsert to handle cases where the profile doesn't exist yet
+        updates["id"] = user_id # Ensure ID is present for upsert
+        result = client.table(table_name).upsert(updates).execute()
         return result.data[0] if result.data else None

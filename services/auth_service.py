@@ -28,7 +28,7 @@ class AuthService:
                     "data": {
                         "name": user_in.name,
                         "phone": user_in.phone,
-                        "role": user_in.role if user_in.role in ["employer", "employee"] else "employee"
+                        "role": user_in.role if user_in.role in ["employer", "hire", "work", "worker"] else "employee"
                     }
                 }
             })
@@ -40,7 +40,8 @@ class AuthService:
                 )
             
             # 2. Insert profile based on role
-            role = auth_response.user.user_metadata.get("role", "employee")
+            role_meta = auth_response.user.user_metadata.get("role", "employee")
+            role = "employer" if role_meta in ["employer", "hire"] else "employee"
             table_name = "employers" if role == "employer" else "employees"
             
             user_data = {
@@ -61,7 +62,7 @@ class AuthService:
                 "user_id": str(auth_response.user.id),
                 "email": auth_response.user.email,
                 "profile": profile,
-                "role": role
+                "role": role_meta
             }
             
         except Exception as e:
@@ -136,8 +137,14 @@ class AuthService:
             db_updates["city"] = updates["city"]
         if "profile_pic_url" in updates:
             db_updates["profile_pic_url"] = updates["profile_pic_url"]
+        if "lat" in updates:
+            db_updates["lat"] = updates["lat"]
+        if "lng" in updates:
+            db_updates["lng"] = updates["lng"]
 
         if is_employee:
+            if "is_available" in updates:
+                db_updates["is_available"] = updates["is_available"]
             if "skills" in updates:
                 db_updates["skills"] = updates["skills"]
             if "bio" in updates:
