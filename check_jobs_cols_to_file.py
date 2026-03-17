@@ -6,7 +6,8 @@ def check_jobs():
     try:
         res = supabase.table('jobs').select('*').limit(1).execute()
         if res.data:
-            print(f"Jobs sample keys: {list(res.data[0].keys())}")
+            with open('job_cols.txt', 'w') as f:
+                f.write(str(list(res.data[0].keys())))
         else:
             print("Jobs table is empty")
     except Exception as e:

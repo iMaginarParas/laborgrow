@@ -100,11 +100,10 @@ class JobService:
             employer_data = {
                 "id": employer_id,
                 "company_name": profile.get("name", "Employer"),
-                "phone": profile.get("phone", ""),
                 "email": profile.get("email", "")
             }
             # Upsert into employers
-            AuthService._user_repo.update_profile(employer_id, "employers", employer_data)
+            await AuthService._user_repo.update_profile(employer_id, "employers", employer_data)
 
         # 2. Filter out fields that don't belong in the DB or need mapping
         lat = job_in.pop('lat', 0.0)

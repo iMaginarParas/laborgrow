@@ -50,13 +50,12 @@ class AuthService:
             }
             if role == "employer":
                 user_data["company_name"] = user_in.name
-                user_data["phone"] = user_in.phone
             else:
                 user_data["full_name"] = user_in.name
                 user_data["phone"] = user_in.phone
                 user_data["city"] = user_in.city
             
-            profile = AuthService._user_repo.update_profile(auth_response.user.id, table_name, user_data)
+            profile = await AuthService._user_repo.update_profile(auth_response.user.id, table_name, user_data)
             
             return {
                 "user_id": str(auth_response.user.id),
@@ -117,7 +116,7 @@ class AuthService:
         """
         Identify user role and apply updates.
         """
-        current_profile = AuthService._user_repo.find_profile(user_id)
+        current_profile = await AuthService._user_repo.find_profile(user_id)
         if not current_profile:
             return None
             
@@ -131,7 +130,7 @@ class AuthService:
         
         if "name" in updates:
             db_updates["full_name" if is_employee else "company_name"] = updates["name"]
-        if "phone" in updates:
+        if "phone" in updates and is_employee:
             db_updates["phone"] = updates["phone"]
         if "city" in updates:
             db_updates["city"] = updates["city"]
@@ -167,7 +166,7 @@ class AuthService:
             return await AuthService.get_user_profile(user_id)
 
         # Apply updates
-        result = AuthService._user_repo.update_profile(user_id, table_name, db_updates)
+        result = await AuthService._user_repo.update_profile(user_id, table_name, db_updates)
         
         if result:
             return await AuthService.get_user_profile(user_id)
@@ -178,7 +177,7 @@ class AuthService:
         """
         Unified profile retriever.
         """
-        profile = AuthService._user_repo.find_profile(user_id)
+        profile = await AuthService._user_repo.find_profile(user_id)
         if profile:
             role = profile.get("role")
             profile["name"] = profile.get("full_name") or profile.get("company_name") or (

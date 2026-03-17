@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from uuid import UUID
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Any
 
 # --- CORE USER SCHEMAS ---
 class UserBase(BaseModel):
@@ -140,8 +140,8 @@ class ReviewResponse(ReviewCreate):
 
 # --- JOB SCHEMAS ---
 class JobCreate(BaseModel):
-    title: str = Field(..., min_length=5, max_length=100)
-    description: str = Field(..., min_length=10)
+    title: str = Field(..., min_length=3, max_length=100)
+    description: str = Field(..., min_length=5)
     category_id: int
     job_city: str
     salary_min: Optional[float] = 0.0
@@ -151,8 +151,8 @@ class JobCreate(BaseModel):
     openings: Optional[int] = 1
 
 class JobResponse(JobCreate):
-    id: UUID
-    employer_id: UUID
+    id: Any
+    employer_id: Any
     status: str = "open"
     created_at: datetime
     category: Optional[CategoryResponse] = None
@@ -164,9 +164,9 @@ class ApplicationCreate(BaseModel):
     job_id: UUID
 
 class ApplicationResponse(BaseModel):
-    id: UUID
-    job_id: UUID
-    worker_id: UUID
+    id: Any
+    job_id: Any
+    worker_id: Any
     status: str # pending, accepted, rejected
     created_at: datetime
     worker: Optional[WorkerResponse] = None

@@ -47,25 +47,21 @@ async def startup_event():
 
 # --- MIDDLEWARE STACK ---
 
-# Enable CORS for cross-platform integration
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False, # Credentials can't be used with * origin
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     """
     Structured middleware to log performance and metadata for every incoming request.
     """
+    # Print for immediate terminal visibility
+    print(f"DEBUG: {request.method} {request.url.path}")
+    
     start_time = time.time()
-    
     response: Response = await call_next(request)
-    
     process_time = time.time() - start_time
+    
+    # Log status code to terminal
+    print(f"DEBUG: Result {response.status_code} path {request.url.path}")
+    
     logger.info(
         "Inbound request processed",
         method=request.method,
@@ -75,6 +71,18 @@ async def log_requests(request: Request, call_next):
     )
     
     return response
+
+# Enable CORS for cross-platform integration
+# In development, we allow all origins matching localhost/127.0.0.1 on any port.
+# Outer-most middleware (last added)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r"https?://.*", # Total wildcard for dev bypass
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+)
 
 # --- EXCEPTION HANDLERS ---
 

@@ -5,7 +5,7 @@ class UserRepository:
     """
     Handles user profile lookups across employees and employers tables.
     """
-    def find_profile(self, user_id: str) -> Optional[Dict[str, Any]]:
+    async def find_profile(self, user_id: str) -> Optional[Dict[str, Any]]:
         client = get_supabase()
 
         # Try employees first
@@ -24,8 +24,13 @@ class UserRepository:
 
         return None
 
-    def update_profile(self, user_id: str, table_name: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    async def update_profile(self, user_id: str, table_name: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         client = get_supabase()
+        
+        # Security: Strip 'phone' from employer updates (column doesn't exist)
+        if table_name == "employers":
+            updates.pop("phone", None)
+            
         # Use upsert to handle cases where the profile doesn't exist yet
         updates["id"] = user_id # Ensure ID is present for upsert
         result = client.table(table_name).upsert(updates).execute()
