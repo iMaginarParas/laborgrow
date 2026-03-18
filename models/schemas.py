@@ -150,11 +150,20 @@ class JobCreate(BaseModel):
     lng: Optional[float] = 0.0
     openings: Optional[int] = 1
 
-class JobResponse(JobCreate):
+class JobResponse(BaseModel):
     id: Any
-    employer_id: Any
+    employer_id: Any = None
+    title: str = ''
+    description: str = ''
+    category_id: Optional[int] = None
+    job_city: str = ''
+    salary_min: Optional[float] = None
+    salary_max: Optional[float] = None
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+    openings: Optional[int] = 1
     status: str = "open"
-    created_at: datetime
+    created_at: Optional[datetime] = None
     category: Optional[CategoryResponse] = None
     class Config:
         from_attributes = True

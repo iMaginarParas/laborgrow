@@ -3,7 +3,7 @@ from repositories.base_repository import BaseRepository
 
 class ApplicationRepository(BaseRepository):
     def __init__(self):
-        super().__init__("job_applications")
+        super().__init__("applications")
 
     async def list_by_job(self, job_id: str) -> List[Dict[str, Any]]:
         result = self.get_client().table(self.table_name)\
