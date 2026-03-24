@@ -27,11 +27,21 @@ class UserRepository:
     async def update_profile(self, user_id: str, table_name: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         client = get_supabase()
         
-        # Security: Strip 'phone' from employer updates (column doesn't exist)
+        # Strip 'phone' from employer updates (column doesn't exist in employers table)
         if table_name == "employers":
             updates.pop("phone", None)
-            
-        # Use upsert to handle cases where the profile doesn't exist yet
-        updates["id"] = user_id # Ensure ID is present for upsert
-        result = client.table(table_name).upsert(updates).execute()
+        
+        # Fetch existing row and merge to preserve non-null required columns
+        existing_res = client.table(table_name).select("*").eq("id", user_id).execute()
+        if existing_res.data:
+            existing = dict(existing_res.data[0])
+            # Merge: existing values are overridden by updates, preserving untouched fields
+            merged = {**existing, **updates}
+        else:
+            # New row — use updates as-is but ensure id is present
+            merged = dict(updates)
+        
+        merged["id"] = user_id  # Always ensure id is present for upsert
+        
+        result = client.table(table_name).upsert(merged).execute()
         return result.data[0] if result.data else None
