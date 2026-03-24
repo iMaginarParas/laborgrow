@@ -8,9 +8,9 @@ class UserRepository:
     async def find_profile(self, user_id: str) -> Optional[Dict[str, Any]]:
         client = get_supabase()
 
-        # Try employees first
+        # Try employees first, but only if they have basic info (email)
         res = client.table("employees").select("*").eq("id", user_id).execute()
-        if res.data:
+        if res.data and res.data[0].get("email") is not None:
             profile = res.data[0]
             profile["role"] = "employee"
             return profile
