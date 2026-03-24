@@ -43,6 +43,18 @@ class UserResponse(BaseModel):
     def coerce_none_to_str(cls, v):
         return v if v is not None else ""
 
+    @field_validator("work_details", mode="before")
+    @classmethod
+    def parse_work_details(cls, v):
+        """Supabase may return JSONB columns as a raw string. Parse it to dict."""
+        if isinstance(v, str):
+            import json
+            try:
+                return json.loads(v)
+            except Exception:
+                return {}
+        return v
+
     class Config:
         from_attributes = True
 
