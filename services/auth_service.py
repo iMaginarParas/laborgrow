@@ -172,13 +172,19 @@ class AuthService:
             
             # If we are an 'employer' becoming an 'employee', make sure common fields are transferred
             if role == "employer":
-                # Ensure we have required data for a new employee record
+                # Ensure we have required data for a new employee record.
+                # 'employer' table uses 'company_name', 'employee' uses 'full_name'
                 if "full_name" not in db_updates:
-                    db_updates["full_name"] = current_profile.get("name") or "Worker"
+                    db_updates["full_name"] = current_profile.get("company_name") or current_profile.get("name") or "Worker"
                 if "email" not in db_updates:
                     db_updates["email"] = current_profile.get("email")
                 if "phone" not in db_updates:
                      db_updates["phone"] = current_profile.get("phone") or "0000000000"
+                
+                # Double check to prevent 'null' violates not-null constraint
+                if not db_updates.get("email"):
+                    # Fallback to a placeholder if absolutely missing, though email should logically be there
+                    db_updates["email"] = f"user_{user_id}@laborgrow.com"
         else:
             # Employer table is restricted to id, company_name, email
             if "name" in updates:
