@@ -1,0 +1,500 @@
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
+    raise app_exc
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 93, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 144, in simple_response
+    await self.app(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 715, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 735, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\routers\jobs.py", line 19, in create_job
+    return await JobService.create_job(job_in.dict(), current_user["id"])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\services\job_service.py", line 107, in create_job
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\repositories\user_repository.py", line 31, in update_profile
+    result = client.table(table_name).upsert(updates).execute()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\postgrest\_sync\request_builder.py", line 78, in execute
+    raise APIError(r.json())
+postgrest.exceptions.APIError: {'code': 'PGRST204', 'details': None, 'hint': None, 'message': "Could not find the 'phone' column of 'employers' in the schema cache"}
+
+
+--- 2026-03-17T20:45:02.280026 ---
+Path: /api/v1/jobs
+Error: {'code': 'PGRST204', 'details': None, 'hint': None, 'message': "Could not find the 'phone' column of 'employers' in the schema cache"}
+Traceback (most recent call last):
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\anyio\streams\memory.py", line 98, in receive
+    return self.receive_nowait()
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\anyio\streams\memory.py", line 93, in receive_nowait
+    raise WouldBlock
+anyio.WouldBlock
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 157, in call_next
+    message = await recv_stream.receive()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\anyio\streams\memory.py", line 118, in receive
+    raise EndOfStream
+anyio.EndOfStream
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 187, in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\main.py", line 65, in log_requests
+    logger.info(
+                 
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
+    raise app_exc
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 93, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 144, in simple_response
+    await self.app(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 715, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 735, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\routers\jobs.py", line 19, in create_job
+    return await JobService.create_job(job_in.dict(), current_user["id"])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\services\job_service.py", line 107, in create_job
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\repositories\user_repository.py", line 31, in update_profile
+    result = client.table(table_name).upsert(updates).execute()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\postgrest\_sync\request_builder.py", line 78, in execute
+    raise APIError(r.json())
+postgrest.exceptions.APIError: {'code': 'PGRST204', 'details': None, 'hint': None, 'message': "Could not find the 'phone' column of 'employers' in the schema cache"}
+
+
+--- 2026-03-17T20:48:12.195716 ---
+Path: /api/v1/jobs
+Error: 1 validation errors:
+  {'type': 'uuid_type', 'loc': ('response', 0, 'id'), 'msg': 'UUID input should be a string, bytes or UUID object', 'input': 17}
+
+Traceback (most recent call last):
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 157, in call_next
+    message = await recv_stream.receive()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\anyio\streams\memory.py", line 98, in receive
+    return self.receive_nowait()
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\anyio\streams\memory.py", line 91, in receive_nowait
+    raise EndOfStream
+anyio.EndOfStream
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 187, in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\main.py", line 65, in log_requests
+    logger.info(
+                 
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
+    raise app_exc
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 93, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 144, in simple_response
+    await self.app(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 715, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 735, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\fastapi\routing.py", line 327, in app
+    content = await serialize_response(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\fastapi\routing.py", line 176, in serialize_response
+    raise ResponseValidationError(
+fastapi.exceptions.ResponseValidationError: 1 validation errors:
+  {'type': 'uuid_type', 'loc': ('response', 0, 'id'), 'msg': 'UUID input should be a string, bytes or UUID object', 'input': 17}
+
+
+
+--- HTTP ISSUE 2026-03-17T20:48:54.676770 ---
+Path: /api/v1/notifications
+Status: 404
+Detail: Not Found
+
+
+--- 2026-03-17T20:49:24.659489 ---
+Path: /api/v1/jobs
+Error: {'code': 'PGRST204', 'details': None, 'hint': None, 'message': "Could not find the 'phone' column of 'employers' in the schema cache"}
+Traceback (most recent call last):
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\anyio\streams\memory.py", line 98, in receive
+    return self.receive_nowait()
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\anyio\streams\memory.py", line 93, in receive_nowait
+    raise WouldBlock
+anyio.WouldBlock
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 157, in call_next
+    message = await recv_stream.receive()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\anyio\streams\memory.py", line 118, in receive
+    raise EndOfStream
+anyio.EndOfStream
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 187, in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\main.py", line 65, in log_requests
+    logger.info(
+                 
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
+    raise app_exc
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 93, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 144, in simple_response
+    await self.app(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 715, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 735, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\routers\jobs.py", line 19, in create_job
+    return await JobService.create_job(job_in.dict(), current_user["id"])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\services\job_service.py", line 107, in create_job
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\repositories\user_repository.py", line 31, in update_profile
+    result = client.table(table_name).upsert(updates).execute()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\postgrest\_sync\request_builder.py", line 78, in execute
+    raise APIError(r.json())
+postgrest.exceptions.APIError: {'code': 'PGRST204', 'details': None, 'hint': None, 'message': "Could not find the 'phone' column of 'employers' in the schema cache"}
+
+
+--- 2026-03-17T20:53:03.325615 ---
+Path: /api/v1/jobs
+Error: {'code': 'PGRST204', 'details': None, 'hint': None, 'message': "Could not find the 'phone' column of 'employers' in the schema cache"}
+Traceback (most recent call last):
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\anyio\streams\memory.py", line 98, in receive
+    return self.receive_nowait()
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\anyio\streams\memory.py", line 93, in receive_nowait
+    raise WouldBlock
+anyio.WouldBlock
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 157, in call_next
+    message = await recv_stream.receive()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\anyio\streams\memory.py", line 118, in receive
+    raise EndOfStream
+anyio.EndOfStream
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 187, in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\main.py", line 65, in log_requests
+    logger.info(
+                 
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
+    raise app_exc
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 93, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 144, in simple_response
+    await self.app(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 715, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 735, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\routers\jobs.py", line 19, in create_job
+    return await JobService.create_job(job_in.dict(), current_user["id"])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\services\job_service.py", line 107, in create_job
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\repositories\user_repository.py", line 31, in update_profile
+    if table_name == "employers":
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\postgrest\_sync\request_builder.py", line 78, in execute
+    raise APIError(r.json())
+postgrest.exceptions.APIError: {'code': 'PGRST204', 'details': None, 'hint': None, 'message': "Could not find the 'phone' column of 'employers' in the schema cache"}
+
+
+--- 2026-03-17T21:06:46.356271 ---
+Path: /api/v1/jobs
+Error: 1 validation errors:
+  {'type': 'uuid_type', 'loc': ('response', 0, 'id'), 'msg': 'UUID input should be a string, bytes or UUID object', 'input': 17}
+
+Traceback (most recent call last):
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 157, in call_next
+    message = await recv_stream.receive()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\anyio\streams\memory.py", line 98, in receive
+    return self.receive_nowait()
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\anyio\streams\memory.py", line 91, in receive_nowait
+    raise EndOfStream
+anyio.EndOfStream
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 187, in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\main.py", line 65, in log_requests
+    logger.info(
+                 
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
+    raise app_exc
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 93, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 144, in simple_response
+    await self.app(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 715, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 735, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\fastapi\routing.py", line 327, in app
+    content = await serialize_response(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\fastapi\routing.py", line 176, in serialize_response
+    raise ResponseValidationError(
+fastapi.exceptions.ResponseValidationError: 1 validation errors:
+  {'type': 'uuid_type', 'loc': ('response', 0, 'id'), 'msg': 'UUID input should be a string, bytes or UUID object', 'input': 17}
+
+
+
+--- 2026-03-17T21:07:17.517017 ---
+Path: /api/v1/jobs
+Error: {'code': 'PGRST204', 'details': None, 'hint': None, 'message': "Could not find the 'phone' column of 'employers' in the schema cache"}
+Traceback (most recent call last):
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\anyio\streams\memory.py", line 98, in receive
+    return self.receive_nowait()
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\anyio\streams\memory.py", line 93, in receive_nowait
+    raise WouldBlock
+anyio.WouldBlock
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 157, in call_next
+    message = await recv_stream.receive()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\anyio\streams\memory.py", line 118, in receive
+    raise EndOfStream
+anyio.EndOfStream
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 187, in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\main.py", line 65, in log_requests
+    logger.info(
+                 
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
+    raise app_exc
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 93, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 144, in simple_response
+    await self.app(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 715, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 735, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\routers\jobs.py", line 19, in create_job
+    return await JobService.create_job(job_in.dict(), current_user["id"])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\services\job_service.py", line 107, in create_job
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\repositories\user_repository.py", line 31, in update_profile
+    if table_name == "employers":
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Sunil\OneDrive\Desktop\laborgro\backend\venv\Lib\site-packages\postgrest\_sync\request_builder.py", line 78, in execute
+    raise APIError(r.json())
+postgrest.exceptions.APIError: {'code': 'PGRST204', 'details': None, 'hint': None, 'message': "Could not find the 'phone' column of 'employers' in the schema cache"}
+

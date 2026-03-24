@@ -1,4 +1,5 @@
-from database import supabase
+from database import get_supabase
+supabase = get_supabase()
 
 tables = ['employees', 'employers', 'jobs', 'job_applications', 'workers', 'categories', 'users', 'bookings']
 

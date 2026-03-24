@@ -115,33 +115,48 @@ class AuthService:
     async def update_user_profile(user_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Identify user role and apply updates.
+        Handles transitions and multi-role compatibility.
         """
         current_profile = await AuthService._user_repo.find_profile(user_id)
         if not current_profile:
             return None
             
         role = current_profile.get("role")
-        is_employee = role == "employee"
+        
+        # Decide which table to update. 
+        # If worker fields (skills, bio, categaries) are present, force 'employees' table.
+        worker_fields = ["skills", "bio", "category_ids", "experience_years", "hourly_rate", "is_available"]
+        is_worker_update = any(field in updates for field in worker_fields)
+        
+        is_employee = role == "employee" or is_worker_update
         table_name = "employees" if is_employee else "employers"
         
         # Map frontend field names to database columns
         db_updates = {}
         work_details_updates = {}
         
+        # Common fields (Safe based on our latest inspection)
         if "name" in updates:
-            db_updates["full_name" if is_employee else "company_name"] = updates["name"]
-        if "phone" in updates and is_employee:
-            db_updates["phone"] = updates["phone"]
-        if "city" in updates:
-            db_updates["city"] = updates["city"]
-        if "profile_pic_url" in updates:
-            db_updates["profile_pic_url"] = updates["profile_pic_url"]
-        if "lat" in updates:
-            db_updates["lat"] = updates["lat"]
-        if "lng" in updates:
-            db_updates["lng"] = updates["lng"]
+            db_updates["full_name" if table_name == "employees" else "company_name"] = updates["name"]
+        
+        # 'city', 'lat', 'lng' currently only exist in 'employees' based on inspection
+        if table_name == "employees":
+            if "city" in updates:
+                db_updates["city"] = updates["city"]
+            if "lat" in updates:
+                db_updates["lat"] = updates["lat"]
+            if "lng" in updates:
+                db_updates["lng"] = updates["lng"]
+            if "profile_pic_url" in updates:
+                db_updates["profile_pic_url"] = updates["profile_pic_url"]
+            if "phone" in updates:
+                db_updates["phone"] = updates["phone"]
+        else:
+            # Fallback for employer: only update email/company_name if we reach here
+            if "profile_pic_url" in updates:
+                db_updates["profile_pic_url"] = updates["profile_pic_url"]
 
-        if is_employee:
+        if table_name == "employees":
             if "is_available" in updates:
                 db_updates["is_available"] = updates["is_available"]
             if "skills" in updates:
@@ -161,6 +176,17 @@ class AuthService:
                     existing_details = {}
                 existing_details.update(work_details_updates)
                 db_updates["work_details"] = existing_details
+            
+            # Ensure email is present for employees if we are creating/upserting a new record
+            if not current_profile.get("email") and "email" not in db_updates:
+                # We can't easily get it here, but typically it should be in the profile or session
+                pass
+            
+            # If we are an 'employer' becoming an 'employee', make sure common fields are transferred
+            if role == "employer" and table_name == "employees":
+                db_updates["full_name"] = current_profile.get("name") or "Worker"
+                db_updates["email"] = current_profile.get("email")
+                db_updates["phone"] = current_profile.get("phone") or "0000000000"
 
         if not db_updates:
             return await AuthService.get_user_profile(user_id)
