@@ -54,45 +54,32 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 async def generic_exception_handler(request: Request, exc: Exception):
     """
-    Catch-all for unhandled errors, mapping raw database errors to polite messages.
+    Catch-all for unhandled errors. Surfacing internal error details temporarily 
+    for production debugging of schema issues.
     """
-    err_str = str(exc).lower()
-    
-    # Determine the friendliest message based on the internal error
-    if "schema cache" in err_str or "does not exist" in err_str or "relation" in err_str:
-        friendly_msg = "Our marketplace is currently undergoing a scheduled update. Please try again in a few minutes."
-        status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-    elif "connection" in err_str or "timeout" in err_str:
-        friendly_msg = "We're having trouble connecting to our services. Please check your internet and try again."
-        status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-    else:
-        friendly_msg = "Something went wrong on our end. We've been notified and are looking into it!"
-        status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-
+    err_str = str(exc)
     full_traceback = traceback.format_exc()
+    
+    # Still map 'schema cache' to 503 for standard handling, 
+    # but include the actual exception details for visibility.
+    status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    if "schema cache" in err_str.lower() or "does not exist" in err_str.lower():
+        status_code = status.HTTP_533_SERVICE_UNAVAILABLE # Using a custom code to distinguish from Railway 503
+
     logger.error(
-        "Internal Error", 
+        "Internal Error Details", 
         path=request.url.path, 
-        error=str(exc),
+        error=err_str,
         traceback=full_traceback
     )
-
-    # Emergency file logging for Antigravity visibility
-    try:
-        with open("c:/Users/Sunil/OneDrive/Desktop/laborgro/backend/error_log.txt", "a") as f:
-            f.write(f"\n--- {datetime.utcnow().isoformat()} ---\n")
-            f.write(f"Path: {request.url.path}\n")
-            f.write(f"Error: {str(exc)}\n")
-            f.write(full_traceback)
-            f.write("\n")
-    except:
-        pass
 
     return JSONResponse(
         status_code=status_code,
         content={
             "status": "error",
-            "message": friendly_msg
+            "message": "Marketplace Error",
+            "detail": err_str,
+            "traceback": full_traceback[:500] # Truncated for response
         }
     )
 

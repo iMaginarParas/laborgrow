@@ -11,24 +11,44 @@ class ApplicationService:
 
     @staticmethod
     async def apply_to_job(job_id: str, worker_id: str) -> Dict[str, Any]:
+        """
+        Apply to a job. Ensures worker profile exists.
+        """
+        # Ensure worker profile exists in 'employees' table first
+        from services.auth_service import AuthService
+        profile = await AuthService.get_user_profile(worker_id)
+        if not profile or profile.get("role") != "employee":
+             from fastapi import HTTPException
+             raise HTTPException(
+                 status_code=400, 
+                 detail="Please create a worker profile before applying for jobs."
+             )
+
         data = {
             "id": str(uuid.uuid4()),
             "job_id": job_id,
             "worker_id": worker_id,
             "status": "pending"
         }
-        result = await ApplicationService._app_repo.insert(data)
         
-        # Notify Employer
-        job = await ApplicationService._job_repo.find_by_id(job_id)
-        if job and job.get("employer_id"):
-            await NotificationService.create_notification(
-                user_id=str(job["employer_id"]),
-                title="New Job Applicant!",
-                message=f"Someone just applied for your job: {job.get('title')}. Review them now.",
-                type="application"
-            )
-        return result
+        try:
+            result = await ApplicationService._app_repo.insert(data)
+            
+            # Notify Employer
+            job = await ApplicationService._job_repo.find_by_id(job_id)
+            if job and job.get("employer_id"):
+                await NotificationService.create_notification(
+                    user_id=str(job["employer_id"]),
+                    title="New Job Applicant!",
+                    message=f"Someone just applied for your job: {job.get('title')}. Review them now.",
+                    type="application"
+                )
+            return result
+        except Exception as e:
+            if "duplicate" in str(e).lower() or "unique" in str(e).lower():
+                from fastapi import HTTPException
+                raise HTTPException(status_code=409, detail="You have already applied for this job.")
+            raise e
 
     @staticmethod
     async def list_job_applicants(job_id: str, employer_id: str) -> List[Dict[str, Any]]:
