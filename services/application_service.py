@@ -24,9 +24,19 @@ class ApplicationService:
                  detail="Please create a worker profile before applying for jobs."
              )
 
+        # Safely convert job_id to integer (jobs table uses integer PKs)
+        try:
+            job_id_int = int(job_id)
+        except (ValueError, TypeError):
+            from fastapi import HTTPException
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid job ID format. Expected an integer, got: {job_id}"
+            )
+
         data = {
             "id": str(uuid.uuid4()),
-            "job_id": job_id,
+            "job_id": job_id_int,
             "worker_id": worker_id,
             "status": "pending"
         }
@@ -35,7 +45,7 @@ class ApplicationService:
             result = await ApplicationService._app_repo.insert(data)
             
             # Notify Employer
-            job = await ApplicationService._job_repo.find_by_id(job_id)
+            job = await ApplicationService._job_repo.find_by_id(job_id_int)
             if job and job.get("employer_id"):
                 await NotificationService.create_notification(
                     user_id=str(job["employer_id"]),
