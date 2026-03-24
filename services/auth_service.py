@@ -176,15 +176,22 @@ class AuthService:
                 # 'employer' table uses 'company_name', 'employee' uses 'full_name'
                 if "full_name" not in db_updates:
                     db_updates["full_name"] = current_profile.get("company_name") or current_profile.get("name") or "Worker"
-                if "email" not in db_updates:
-                    db_updates["email"] = current_profile.get("email")
                 if "phone" not in db_updates:
-                     db_updates["phone"] = current_profile.get("phone") or "0000000000"
+                    db_updates["phone"] = current_profile.get("phone") or "0000000000"
                 
-                # Double check to prevent 'null' violates not-null constraint
+                # Always fetch email from Supabase Auth — the guaranteed source of truth
+                # Do not rely on profile table which may have NULL email
                 if not db_updates.get("email"):
-                    # Fallback to a placeholder if absolutely missing, though email should logically be there
-                    db_updates["email"] = f"user_{user_id}@laborgrow.com"
+                    try:
+                        client = get_supabase()
+                        auth_user = client.auth.admin.get_user_by_id(user_id)
+                        db_updates["email"] = auth_user.user.email if auth_user and auth_user.user else None
+                    except Exception:
+                        pass
+                
+                # Last resort fallback
+                if not db_updates.get("email"):
+                    db_updates["email"] = current_profile.get("email") or f"user_{user_id}@laborgrow.com"
         else:
             # Employer table is restricted to id, company_name, email
             if "name" in updates:
