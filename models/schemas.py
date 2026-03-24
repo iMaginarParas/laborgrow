@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from uuid import UUID
 from datetime import datetime
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Dict
 
 # --- CORE USER SCHEMAS ---
 class UserBase(BaseModel):
@@ -18,16 +18,19 @@ class UserCreate(UserBase):
 
 class UserResponse(BaseModel):
     """
-    Lenient response schema — DB rows may have blank/missing phone numbers
-    so we do not enforce min_length on output to avoid ResponseValidationError.
+    Unified response schema for User profiles across all roles.
+    Includes role and worker-specific metadata if available.
     """
     id: UUID
     name: str = "Worker"
     email: str = ""
     phone: str = ""
+    role: Optional[str] = "employee"
     profile_pic_url: Optional[str] = None
     address: Optional[str] = None
     city: Optional[str] = None
+    is_available: Optional[bool] = True
+    work_details: Optional[Dict[str, Any]] = None
     created_at: Optional[datetime] = None
 
     @field_validator("name", mode="before")
@@ -170,7 +173,7 @@ class JobResponse(BaseModel):
 
 # --- JOB APPLICATION SCHEMAS ---
 class ApplicationCreate(BaseModel):
-    job_id: UUID
+    job_id: Any
 
 class ApplicationResponse(BaseModel):
     id: Any
