@@ -8,6 +8,7 @@ from .reviews import router as reviews_router
 from .hire import router as hire_router
 from .worker_dashboard import router as worker_dashboard_router
 from .notifications import router as notifications_router
+from .chat_router import router as chat_router
 
 __all__ = [
     "auth_router",
@@ -20,5 +21,7 @@ __all__ = [
     "reviews_router",
     "hire_router",
     "worker_dashboard_router",
-    "notifications_router"
+    "notifications_router",
+    "chat_router"
 ]
+
