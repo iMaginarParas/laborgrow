@@ -35,7 +35,6 @@ class ApplicationService:
             )
 
         data = {
-            "id": str(uuid.uuid4()),
             "job_id": job_id_int,
             "worker_id": worker_id,
             "status": "pending"
