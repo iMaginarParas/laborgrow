@@ -1,1 +1,0 @@
-['id', 'created_at', 'title', 'description', 'location', 'employer_id', 'lat_long', 'required_skills', 'openings', 'job_city', 'total_experience', 'salary_min', 'salary_max', 'offers_bonus', 'company_name', 'contact_person', 'phone_number', 'contact_email', 'hiring_speed', 'hiring_frequency', 'budget', 'status', 'category_id']

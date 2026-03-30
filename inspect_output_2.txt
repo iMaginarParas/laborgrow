@@ -1,8 +1,0 @@
-employees: OK | ['id', 'email', 'full_name', 'phone', 'created_at', 'is_available', 'skills', 'work_details', 'city', 'lat', 'lng']
-employers: OK | ['id', 'company_name', 'email']
-jobs: OK | ['id', 'created_at', 'title', 'description', 'location', 'employer_id', 'lat_long', 'required_skills', 'openings', 'job_city', 'total_experience', 'salary_min', 'salary_max', 'offers_bonus', 'company_name', 'contact_person', 'phone_number', 'contact_email', 'hiring_speed', 'hiring_frequency', 'budget', 'status', 'category_id']
-job_applications: OK | Empty
-workers: MISSING
-categories: OK | ['id', 'name', 'emoji', 'slug', 'icon_url', 'created_at']
-users: MISSING
-bookings: OK | ['id', 'customer_id', 'worker_id', 'category_id', 'booking_date', 'time_slot', 'hours', 'address', 'total_amount', 'platform_fee', 'discount_amount', 'booking_ref', 'status', 'created_at']
