@@ -27,7 +27,12 @@ from routers import (
     hire_router,
     worker_dashboard_router,
     notifications_router,
-    chat_router
+    chat_router,
+    admin_auth_router,
+    admin_control_center_router,
+    admin_users_router,
+    admin_workers_router,
+    admin_bookings_router
 )
 
 # Application Initialization
