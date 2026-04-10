@@ -7,20 +7,14 @@ from repositories.worker_repository import WorkerRepository
 from repositories.job_repository import JobRepository
 from repositories.booking_repository import BookingRepository
 
+from backend.dependencies.admin_auth import get_current_admin, role_required
+
 router = APIRouter(prefix="/admin", tags=["Administrator Operations"])
 
 # Repositories
 _worker_repo = WorkerRepository()
 _job_repo = JobRepository()
 _booking_repo = BookingRepository()
-
-# ── Auth Dependency ────────────────────────────────────────────────────────────
-
-def require_admin(x_admin_key: str = Header(...)):
-    """Validates X-Admin-Key header against ADMIN_SECRET_KEY in settings."""
-    admin_key = settings.ADMIN_SECRET_KEY or "change-me-in-env"
-    if x_admin_key != admin_key:
-        raise HTTPException(status_code=403, detail="Invalid or missing admin key.")
 
 # ── Models ────────────────────────────────────────────────────────────────────
 
@@ -33,10 +27,11 @@ class AdminJobUpdate(BaseModel):
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 
-@router.get("/dashboard", dependencies=[Depends(require_admin)])
+@router.get("/dashboard", dependencies=[Depends(get_current_admin)])
 async def admin_dashboard():
     """
     Marketplace overview — statistics and recent activity.
+    Accessible by any verified Admin.
     """
     try:
         total_jobs = await _job_repo.count_all()
@@ -57,17 +52,28 @@ async def admin_dashboard():
     except Exception as e:
         raise e
 
-@router.post("/workers/{worker_id}/approve", response_model=Dict[str, str], dependencies=[Depends(require_admin)])
+@router.post("/workers/{worker_id}/approve", 
+             response_model=Dict[str, str], 
+             dependencies=[Depends(role_required(["SUPER_ADMIN", "OPS_ADMIN"]))])
 async def approve_worker(
     worker_id: str
 ) -> Dict[str, str]:
     """
-    Approve a newly registered worker for inclusion in the marketplace.
+    Approve a newly registered worker.
+    Requires SUPER_ADMIN or OPS_ADMIN role.
     """
     try:
         res = await _worker_repo.update(worker_id, {"is_verified": True})
         if not res:
-             raise HTTPException(status_code=404, detail="Worker record not found.")
+            raise HTTPException(status_code=404, detail="Worker record not found.")
         return {"message": "Worker successfully approved."}
     except Exception as e:
         raise e
+
+@router.get("/finance/reports", 
+            dependencies=[Depends(role_required(["SUPER_ADMIN", "FINANCE_ADMIN"]))])
+async def get_finance_reports():
+    """
+    Example route for sensitive financial data.
+    """
+    return {"message": "Access granted to Finance/Super Admin."}

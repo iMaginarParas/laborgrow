@@ -9,6 +9,11 @@ from .hire import router as hire_router
 from .worker_dashboard import router as worker_dashboard_router
 from .notifications import router as notifications_router
 from .chat_router import router as chat_router
+from .admin_auth import router as admin_auth_router
+from .admin_control_center import router as admin_control_center_router
+from .admin_users import router as admin_users_router
+from .admin_workers import router as admin_workers_router
+from .admin_bookings import router as admin_bookings_router
 
 __all__ = [
     "auth_router",
@@ -22,6 +27,11 @@ __all__ = [
     "hire_router",
     "worker_dashboard_router",
     "notifications_router",
-    "chat_router"
+    "chat_router",
+    "admin_auth_router",
+    "admin_control_center_router",
+    "admin_users_router",
+    "admin_workers_router",
+    "admin_bookings_router"
 ]
 
