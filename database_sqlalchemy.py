@@ -1,20 +1,25 @@
-from sqlalchemy import create_client, create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
 import os
-from dotenv import load_dotenv
 
-load_dotenv()
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-# We assume DATABASE_URL is available in .env as per most FastAPI setups
-# If not, it can be constructed from Supabase parameters
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
+# Handling potential asyncpg URLs from Supabase/Railway env by ensuring we use sync driver for this specific engine
+if DATABASE_URL and "+asyncpg" in DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.replace("+asyncpg", "")
 
-if not SQLALCHEMY_DATABASE_URL:
-    # Fallback to a placeholder if not found, though in production this must be set
-    SQLALCHEMY_DATABASE_URL = "postgresql://postgres:postgres@localhost/postgres"
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True
+)
 
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+SessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=engine
+)
+
+Base = declarative_base()
 
 def get_db():
     db = SessionLocal()
