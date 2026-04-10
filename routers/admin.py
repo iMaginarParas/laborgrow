@@ -7,7 +7,7 @@ from repositories.worker_repository import WorkerRepository
 from repositories.job_repository import JobRepository
 from repositories.booking_repository import BookingRepository
 
-from backend.dependencies.admin_auth import get_current_admin, role_required
+from dependencies.admin_auth import get_current_admin, role_required
 
 router = APIRouter(prefix="/admin", tags=["Administrator Operations"])
 
