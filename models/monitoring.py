@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Optional, Dict, Any
 from sqlalchemy import String, Enum, Text, ForeignKey, DateTime, Integer, Numeric, JSON, Boolean, UUID
 from sqlalchemy.orm import Mapped, mapped_column
-from .base import Base
+from models.base import Base
 
 class SystemEventType(str, enum.Enum):
     ERROR = "ERROR"

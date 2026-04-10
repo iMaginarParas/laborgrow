@@ -1,8 +1,8 @@
 import uuid
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, func
-from ..models.admin_audit_log import AdminAuditLog
-from ..models.schemas import UserResponse # Assuming existing schemas can be reused for response
+from models.admin_audit_log import AdminAuditLog
+from models.schemas import UserResponse # Assuming existing schemas can be reused for response
 from typing import List, Dict, Any, Optional
 
 def log_admin_audit(db: Session, admin_id: uuid.UUID, action: str, target_resource: str, metadata: Dict[str, Any]):

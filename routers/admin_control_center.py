@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from ..database_sqlalchemy import get_db
-from ..dependencies.admin_auth import role_required
-from ..services.admin_service import AdminService
+from database_sqlalchemy import get_db
+from dependencies.admin_auth import role_required
+from services.admin_service import AdminService
 from typing import Dict, Any
 
 router = APIRouter(prefix="/admin", tags=["Admin Control Center"])

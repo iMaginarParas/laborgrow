@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Optional, List
 from sqlalchemy import String, Enum, Text, ForeignKey, DateTime, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from .base import Base
+from models.base import Base
 
 class DisputeStatus(str, enum.Enum):
     OPEN = "OPEN"

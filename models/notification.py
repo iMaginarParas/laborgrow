@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Optional
 from sqlalchemy import String, Enum, Text, ForeignKey, DateTime, Integer, UUID, Boolean
 from sqlalchemy.orm import Mapped, mapped_column
-from .base import Base
+from models.base import Base
 
 class NotificationChannel(str, enum.Enum):
     PUSH = "PUSH"

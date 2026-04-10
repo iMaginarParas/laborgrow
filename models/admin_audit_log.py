@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from sqlalchemy import String, DateTime, JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column
-from .base import Base
+from models.base import Base
 
 class AdminAuditLog(Base):
     __tablename__ = "admin_audit_logs"

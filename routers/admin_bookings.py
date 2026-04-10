@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from ..database_sqlalchemy import get_db
-from ..dependencies.admin_auth import role_required
-from ..services.admin_service import AdminService, log_admin_audit
-from ..services.booking_service import BookingService
+from database_sqlalchemy import get_db
+from dependencies.admin_auth import role_required
+from services.admin_service import AdminService, log_admin_audit
+from services.booking_service import BookingService
 from uuid import UUID
 from typing import Optional
 

@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, date
 from sqlalchemy import String, Integer, Numeric, Date, DateTime, ForeignKey, Text, UUID
 from sqlalchemy.orm import Mapped, mapped_column
-from .base import Base
+from models.base import Base
 
 class DailyMetric(Base):
     __tablename__ = "daily_metrics"
