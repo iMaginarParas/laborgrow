@@ -81,13 +81,21 @@ async def log_requests(request: Request, call_next):
 # Enable CORS for cross-platform integration
 # In development, we allow all origins matching localhost/127.0.0.1 on any port.
 # Outer-most middleware (last added)
+# Enable CORS for cross-platform integration
+# We allow both development (localhost) and production (Netlify) origins.
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"https?://.*", # Total wildcard for dev bypass
+    allow_origins=[
+        "https://laborgroadmin1.netlify.app",
+        "https://laborgro.netlify.app",
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:5173",
+        "http://localhost:5174",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"],
 )
 
 # --- EXCEPTION HANDLERS ---
