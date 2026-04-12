@@ -23,29 +23,21 @@ class AdminService:
     @staticmethod
     def get_paginated_users(db: Session, skip: int = 0, limit: int = 20, search: Optional[str] = None):
         """
-        Retrieves a paginated list of users with optional search filtering.
+        Retrieves a paginated list of users from the Supabase profiles table.
         """
-        # Since we are using SQLAlchemy for Admin, but main users might be in Supabase, 
-        # we still use raw SQL or SQLAlchemy models if they exist. 
-        # For now, we assume a 'users' table exists.
-        from sqlalchemy import text
+        from database import get_supabase
+        client = get_supabase()
         
-        search_query = ""
-        params = {"skip": skip, "limit": limit}
+        query = client.table("profiles").select("*", count="exact")
         
         if search:
-            search_query = "WHERE email ILIKE :search OR name ILIKE :search"
-            params["search"] = f"%{search}%"
+            query = query.or_(f"name.ilike.%{search}%,email.ilike.%{search}%")
             
-        count_sql = text(f"SELECT COUNT(*) FROM auth.users {search_query}")
-        data_sql = text(f"SELECT * FROM auth.users {search_query} LIMIT :limit OFFSET :skip")
-        
-        total = db.execute(count_sql, {"search": params.get("search")}).scalar()
-        data = db.execute(data_sql, params).mappings().all()
+        res = query.range(skip, skip + limit - 1).execute()
         
         return {
-            "total": total,
-            "data": data,
+            "total": res.count or 0,
+            "data": res.data or [],
             "pagination": {
                 "skip": skip,
                 "limit": limit
@@ -54,18 +46,83 @@ class AdminService:
 
     @staticmethod
     def get_paginated_workers(db: Session, skip: int = 0, limit: int = 20, search: Optional[str] = None):
-        # Implementation for workers
-        query_sql = "SELECT * FROM employees" # Existing workers table
-        if search:
-            query_sql += " WHERE full_name ILIKE :search"
+        """
+        Retrieves a paginated list of workers (employees) from Supabase.
+        """
+        from database import get_supabase
+        client = get_supabase()
         
-        # Real aggregate and fetch logic
-        return {"total": 0, "data": [], "pagination": {"skip": skip, "limit": limit}}
+        # We join with profiles to get names
+        query = client.table("employees").select("*, profiles(*)", count="exact")
+        
+        if search:
+            query = query.filter("profiles.name", "ilike", f"%{search}%")
+            
+        res = query.range(skip, skip + limit - 1).execute()
+        
+        # Flatten the profile data for the frontend
+        flattened_data = []
+        for worker in (res.data or []):
+            profile = worker.pop("profiles", {})
+            flattened_data.append({
+                **worker,
+                "name": profile.get("name", "Unknown"),
+                "email": profile.get("email", ""),
+                "status": "Active" if worker.get("is_available") else "Inactive",
+                "kyc": "Approved" if worker.get("is_verified") else "Pending",
+                "jobs": 0, # Placeholder
+            })
+            
+        return {
+            "total": res.count or 0,
+            "data": flattened_data,
+            "pagination": {
+                "skip": skip,
+                "limit": limit
+            }
+        }
 
     @staticmethod
     def get_paginated_bookings(db: Session, skip: int = 0, limit: int = 20, search: Optional[str] = None):
-        # Implementation for bookings
-        return {"total": 0, "data": [], "pagination": {"skip": skip, "limit": limit}}
+        """
+        Retrieves a paginated list of bookings from Supabase.
+        """
+        from database import get_supabase
+        client = get_supabase()
+        
+        query = client.table("bookings").select("*, profiles(name), employees(profiles(name))", count="exact")
+        
+        res = query.order("created_at", descending=True).range(skip, skip + limit - 1).execute()
+        
+        formatted_data = []
+        for b in (res.data or []):
+            employer_name = b.get("profiles", {}).get("name", "Unknown")
+            # The employee join might be nested
+            worker_info = b.get("employees", {})
+            worker_name = "Unknown"
+            if isinstance(worker_info, dict):
+                worker_name = worker_info.get("profiles", {}).get("name", "Worker")
+            elif isinstance(worker_info, list) and len(worker_info) > 0:
+                worker_name = worker_info[0].get("profiles", {}).get("name", "Worker")
+
+            formatted_data.append({
+                "id": b.get("booking_ref") or str(b.get("id")),
+                "employer": employer_name,
+                "worker": worker_name,
+                "service": "Service", # Map category_id if needed
+                "amount": f"₹{b.get('total_amount', 0)}",
+                "date": b.get("booking_date"),
+                "status": b.get("status", "Pending")
+            })
+
+        return {
+            "total": res.count or 0,
+            "data": formatted_data,
+            "pagination": {
+                "skip": skip,
+                "limit": limit
+            }
+        }
 
     @staticmethod
     def get_dashboard_metrics(db: Session):
