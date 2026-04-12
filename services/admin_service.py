@@ -68,6 +68,38 @@ class AdminService:
         return {"total": 0, "data": [], "pagination": {"skip": skip, "limit": limit}}
 
     @staticmethod
+    def get_dashboard_metrics(db: Session):
+        """
+        Fetches live aggregated metrics from the production database.
+        """
+        from sqlalchemy import text
+        
+        # 1. Total Bookings
+        bookings_count = db.execute(text("SELECT COUNT(*) FROM bookings")).scalar() or 0
+        
+        # 2. Active Workers (Employees)
+        workers_count = db.execute(text("SELECT COUNT(*) FROM employees")).scalar() or 0
+        
+        # 3. Pending Tasks (Jobs)
+        jobs_count = db.execute(text("SELECT COUNT(*) FROM jobs")).scalar() or 0
+        
+        # 4. User Stats (from Supabase auth schema if accessible, or public profiles)
+        users_count = 0
+        try:
+            users_count = db.execute(text("SELECT COUNT(*) FROM auth.users")).scalar() or 0
+        except:
+            # Fallback if auth schema isn't directly queryable via this user
+            pass
+            
+        return {
+            "total_bookings": bookings_count,
+            "active_workers": workers_count,
+            "pending_verifications": 0, # Placeholder if no verification table
+            "active_jobs": jobs_count,
+            "total_users": users_count
+        }
+
+    @staticmethod
     def broadcast_system_message(db: Session, title: str, body: str, admin_id: uuid.UUID):
         # Logging the broadcast action
         log_admin_audit(db, admin_id, "BROADCAST_MESSAGE", "system", {"title": title})

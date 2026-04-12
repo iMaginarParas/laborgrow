@@ -16,12 +16,8 @@ async def get_dashboard_summary(
     Unified dashboard for operational metrics and system status.
     """
     try:
-        # Aggregated metrics from various services
-        metrics = {
-            "total_bookings": 150, # Example placeholder
-            "active_workers": 45,
-            "pending_verifications": 3
-        }
+        # Fetch real metrics from the database
+        metrics = AdminService.get_dashboard_metrics(db)
         
         system_health = {
             "api": "healthy",
