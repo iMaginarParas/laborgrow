@@ -70,34 +70,49 @@ class AdminService:
     @staticmethod
     def get_dashboard_metrics(db: Session):
         """
-        Fetches live aggregated metrics from the production database.
+        Fetches live aggregated metrics using the Supabase REST API.
+        This is more resilient to DATABASE_URL misconfigurations.
         """
-        from sqlalchemy import text
+        from database import get_supabase
+        client = get_supabase()
         
-        # 1. Total Bookings
-        bookings_count = db.execute(text("SELECT COUNT(*) FROM bookings")).scalar() or 0
-        
-        # 2. Active Workers (Employees)
-        workers_count = db.execute(text("SELECT COUNT(*) FROM employees")).scalar() or 0
-        
-        # 3. Pending Tasks (Jobs)
-        jobs_count = db.execute(text("SELECT COUNT(*) FROM jobs")).scalar() or 0
-        
-        # 4. User Stats (from Supabase auth schema if accessible, or public profiles)
-        users_count = 0
         try:
-            users_count = db.execute(text("SELECT COUNT(*) FROM auth.users")).scalar() or 0
-        except:
-            # Fallback if auth schema isn't directly queryable via this user
-            pass
+            # 1. Total Bookings
+            bookings_res = client.table("bookings").select("count", count="exact").limit(1).execute()
+            bookings_count = bookings_res.count or 0
             
-        return {
-            "total_bookings": bookings_count,
-            "active_workers": workers_count,
-            "pending_verifications": 0, # Placeholder if no verification table
-            "active_jobs": jobs_count,
-            "total_users": users_count
-        }
+            # 2. Active Workers (Employees)
+            workers_res = client.table("employees").select("count", count="exact").limit(1).execute()
+            workers_count = workers_res.count or 0
+            
+            # 3. Pending Tasks (Jobs)
+            jobs_res = client.table("jobs").select("count", count="exact").limit(1).execute()
+            jobs_count = jobs_res.count or 0
+            
+            # 4. User Stats (Optional - might require service role)
+            users_count = 0
+            try:
+                # Try fetching from public profiles or a dedicated table if users is sensitive
+                profiles_res = client.table("profiles").select("count", count="exact").limit(1).execute()
+                users_count = profiles_res.count or 0
+            except:
+                pass
+                
+            return {
+                "total_bookings": bookings_count,
+                "active_workers": workers_count,
+                "pending_verifications": 0,
+                "active_jobs": jobs_count,
+                "total_users": users_count
+            }
+        except Exception as e:
+            # Fallback for unexpected API errors
+            return {
+                "total_bookings": 0,
+                "active_workers": 0,
+                "pending_verifications": 0,
+                "error": str(e)
+            }
 
     @staticmethod
     def broadcast_system_message(db: Session, title: str, body: str, admin_id: uuid.UUID):
