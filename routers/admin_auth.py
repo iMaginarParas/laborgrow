@@ -10,16 +10,19 @@ router = APIRouter(prefix="/auth", tags=["Admin Authentication"])
 async def admin_login(login_data: AdminLogin):
     client = get_supabase()
     
+    # Normalize email
+    search_email = login_data.email.lower().strip()
+    
     # Fetch admin user along with their role name
     res = client.table("admin_users") \
         .select("*, admin_roles(name)") \
-        .eq("email", login_data.email) \
+        .eq("email", search_email) \
         .execute()
         
     if not res.data:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, 
-            detail="Invalid admin credentials"
+            detail=f"Admin user not found: {search_email}"
         )
     
     admin = res.data[0]
@@ -28,7 +31,7 @@ async def admin_login(login_data: AdminLogin):
     if not verify_password(login_data.password, admin["password_hash"]):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, 
-            detail="Invalid admin credentials"
+            detail="Password verification failed"
         )
 
     # Check if active
