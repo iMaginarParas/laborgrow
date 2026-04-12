@@ -14,6 +14,7 @@ pydantic-settings==2.7.0
 email-validator==2.2.0
 
 # Authentication
+bcrypt==4.0.1
 passlib[bcrypt]==1.7.4
 python-jose[cryptography]==3.3.0
 # Handled by Supabase SDK
