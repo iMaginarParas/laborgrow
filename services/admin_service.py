@@ -23,25 +23,53 @@ class AdminService:
     @staticmethod
     def get_paginated_users(db: Session, skip: int = 0, limit: int = 20, search: Optional[str] = None):
         """
-        Retrieves a paginated list of users from the Supabase profiles table.
+        Retrieves a paginated list of users by combining employees and employers tables.
         """
         from database import get_supabase
         client = get_supabase()
         
-        query = client.table("profiles").select("*", count="exact")
+        # In a split-table architecture, we fetch from both and merge. 
+        # For simplicity in pagination, we'll fetch 'limit' from each and then slice.
+        
+        emp_query = client.table("employees").select("*")
+        host_query = client.table("employers").select("*")
         
         if search:
-            query = query.or_(f"name.ilike.%{search}%,email.ilike.%{search}%")
+            emp_query  = emp_query.or_(f"full_name.ilike.%{search}%,email.ilike.%{search}%")
+            host_query = host_query.or_(f"company_name.ilike.%{search}%,email.ilike.%{search}%")
             
-        res = query.range(skip, skip + limit - 1).execute()
+        # Fetching a bit more to allow for merging
+        emp_res  = emp_query.range(skip, skip + limit - 1).execute()
+        host_res = host_query.range(skip, skip + limit - 1).execute()
         
+        users = []
+        for e in (emp_res.data or []):
+            users.append({
+                "id": e.get("id"),
+                "name": e.get("full_name") or "Worker",
+                "email": e.get("email"),
+                "role": "Worker",
+                "status": "Active" if e.get("is_available") else "Inactive",
+                "bookings": 0,
+                "joined": e.get("created_at")[:10] if e.get("created_at") else "—"
+            })
+            
+        for h in (host_res.data or []):
+            users.append({
+                "id": h.get("id"),
+                "name": h.get("company_name") or "Employer",
+                "email": h.get("email"),
+                "role": "Employer",
+                "status": "Active",
+                "bookings": 0,
+                "joined": h.get("created_at")[:10] if h.get("created_at") else "—"
+            })
+            
+        # Sort by ID or date if needed, then take the limit
         return {
-            "total": res.count or 0,
-            "data": res.data or [],
-            "pagination": {
-                "skip": skip,
-                "limit": limit
-            }
+            "total": (emp_res.count or 0) + (host_res.count or 0),
+            "data": users[:limit],
+            "pagination": {"skip": skip, "limit": limit}
         }
 
     @staticmethod
@@ -52,34 +80,28 @@ class AdminService:
         from database import get_supabase
         client = get_supabase()
         
-        # We join with profiles to get names
-        query = client.table("employees").select("*, profiles(*)", count="exact")
+        query = client.table("employees").select("*", count="exact")
         
         if search:
-            query = query.filter("profiles.name", "ilike", f"%{search}%")
+            query = query.or_(f"full_name.ilike.%{search}%,email.ilike.%{search}%")
             
         res = query.range(skip, skip + limit - 1).execute()
         
-        # Flatten the profile data for the frontend
         flattened_data = []
         for worker in (res.data or []):
-            profile = worker.pop("profiles", {})
             flattened_data.append({
                 **worker,
-                "name": profile.get("name", "Unknown"),
-                "email": profile.get("email", ""),
+                "name": worker.get("full_name", "Unknown"),
+                "email": worker.get("email", ""),
                 "status": "Active" if worker.get("is_available") else "Inactive",
                 "kyc": "Approved" if worker.get("is_verified") else "Pending",
-                "jobs": 0, # Placeholder
+                "jobs": 0,
             })
             
         return {
             "total": res.count or 0,
             "data": flattened_data,
-            "pagination": {
-                "skip": skip,
-                "limit": limit
-            }
+            "pagination": {"skip": skip, "limit": limit}
         }
 
     @staticmethod
@@ -90,26 +112,28 @@ class AdminService:
         from database import get_supabase
         client = get_supabase()
         
-        query = client.table("bookings").select("*, profiles(name), employees(profiles(name))", count="exact")
+        # We join with employees (worker) and employers (customer)
+        # Note: 'profiles' join is replaced with direct 'employees' and 'employers' lookups
+        query = client.table("bookings").select("*, employees(full_name), employers(company_name)", count="exact")
         
         res = query.order("created_at", descending=True).range(skip, skip + limit - 1).execute()
         
         formatted_data = []
         for b in (res.data or []):
-            employer_name = b.get("profiles", {}).get("name", "Unknown")
-            # The employee join might be nested
-            worker_info = b.get("employees", {})
+            employer_info = b.get("employers")
+            worker_info   = b.get("employees")
+            
+            employer_name = "Unknown"
+            if isinstance(employer_info, dict): employer_name = employer_info.get("company_name", "Employer")
+            
             worker_name = "Unknown"
-            if isinstance(worker_info, dict):
-                worker_name = worker_info.get("profiles", {}).get("name", "Worker")
-            elif isinstance(worker_info, list) and len(worker_info) > 0:
-                worker_name = worker_info[0].get("profiles", {}).get("name", "Worker")
+            if isinstance(worker_info, dict): worker_name = worker_info.get("full_name", "Worker")
 
             formatted_data.append({
                 "id": b.get("booking_ref") or str(b.get("id")),
                 "employer": employer_name,
                 "worker": worker_name,
-                "service": "Service", # Map category_id if needed
+                "service": "Service",
                 "amount": f"₹{b.get('total_amount', 0)}",
                 "date": b.get("booking_date"),
                 "status": b.get("status", "Pending")
@@ -118,10 +142,7 @@ class AdminService:
         return {
             "total": res.count or 0,
             "data": formatted_data,
-            "pagination": {
-                "skip": skip,
-                "limit": limit
-            }
+            "pagination": {"skip": skip, "limit": limit}
         }
 
     @staticmethod
@@ -146,12 +167,12 @@ class AdminService:
             jobs_res = client.table("jobs").select("count", count="exact").limit(1).execute()
             jobs_count = jobs_res.count or 0
             
-            # 4. User Stats (Optional - might require service role)
+            # 4. Total Users (Employees + Employers)
             users_count = 0
             try:
-                # Try fetching from public profiles or a dedicated table if users is sensitive
-                profiles_res = client.table("profiles").select("count", count="exact").limit(1).execute()
-                users_count = profiles_res.count or 0
+                emp_count_res = client.table("employees").select("id", count="exact").limit(1).execute()
+                host_count_res = client.table("employers").select("id", count="exact").limit(1).execute()
+                users_count = (emp_count_res.count or 0) + (host_count_res.count or 0)
             except:
                 pass
                 
