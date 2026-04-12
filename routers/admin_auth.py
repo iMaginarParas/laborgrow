@@ -13,25 +13,33 @@ async def admin_login(login_data: AdminLogin):
     # Normalize email
     search_email = login_data.email.lower().strip()
     
-    # Fetch admin user along with their role name
-    res = client.table("admin_users") \
-        .select("*, admin_roles(name)") \
-        .eq("email", search_email) \
-        .execute()
+    try:
+        # Fetch admin user along with their role name
+        res = client.table("admin_users") \
+            .select("*, admin_roles(name)") \
+            .eq("email", search_email) \
+            .execute()
+            
+        if not res.data:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, 
+                detail=f"Admin user not found: {search_email}"
+            )
         
-    if not res.data:
+        admin = res.data[0]
+        
+        # Check password
+        if not verify_password(login_data.password, admin["password_hash"]):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, 
+                detail="Password verification failed"
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, 
-            detail=f"Admin user not found: {search_email}"
-        )
-    
-    admin = res.data[0]
-    
-    # Check password
-    if not verify_password(login_data.password, admin["password_hash"]):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, 
-            detail="Password verification failed"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Backend Error: {str(e)}"
         )
 
     # Check if active
