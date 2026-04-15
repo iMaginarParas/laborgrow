@@ -174,17 +174,29 @@ class BookingService:
             
             valid_bookings = []
             from services.worker_service import WorkerService
+            
+            # Efficiently fetch all involved employer profiles to avoid join issues
+            customer_ids = list(set([b.get("customer_id") for b in bookings if b.get("customer_id")]))
+            employer_profiles = {}
+            if customer_ids:
+                from database import get_supabase
+                res = get_supabase().table("employers").select("id, company_name, profile_pic_url").in_("id", customer_ids).execute()
+                employer_profiles = {row["id"]: row for row in (res.data or [])}
+
             for b in bookings:
                 # Format Worker context
                 if b.get("worker"):
                     b["worker"] = WorkerService._format_worker(b["worker"])
                 
-                # Format Customer context (ensure 'name' exists for UI consistency)
-                if b.get("customer"):
-                    cust = b["customer"]
-                    cust["name"] = cust.get("company_name") or cust.get("full_name") or "Customer"
-                    # Flatten/normalize avatar for the frontend
-                    cust["avatar_url"] = cust.get("avatar_url") or cust.get("profile_pic_url")
+                # Attach/Format Customer context manually
+                if b.get("customer_id") in employer_profiles:
+                    cust = employer_profiles[b["customer_id"]]
+                    b["customer"] = {
+                        "name": cust.get("company_name") or "Customer",
+                        "avatar_url": cust.get("profile_pic_url")
+                    }
+                else:
+                    b["customer"] = {"name": "Customer", "avatar_url": None}
                 
                 valid_bookings.append(b)
             
