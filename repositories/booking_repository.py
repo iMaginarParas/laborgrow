@@ -7,14 +7,14 @@ class BookingRepository(BaseRepository):
 
     async def find_with_worker(self, booking_id: str) -> Optional[Dict[str, Any]]:
         result = self.get_client().table(self.table_name)\
-            .select("*, worker:employees(*), customer:employers(*)")\
+            .select("*, worker:employees(*)")\
             .eq("id", str(booking_id))\
             .execute()
         return result.data[0] if result.data else None
 
     async def list_by_customer(self, customer_id: str) -> List[Dict[str, Any]]:
         result = self.get_client().table(self.table_name)\
-            .select("*, worker:employees(*), customer:employers(*)")\
+            .select("*, worker:employees(*)")\
             .or_(f"customer_id.eq.{customer_id},worker_id.eq.{customer_id}")\
             .order("created_at", desc=True)\
             .execute()
