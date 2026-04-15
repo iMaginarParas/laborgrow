@@ -20,24 +20,27 @@ async def get_current_user(
         # Validate the token with Supabase Auth
         user_response = client.auth.get_user(token)
         
-        if not user_response.user:
+        if not user_response or not getattr(user_response, 'user', None):
+            print(f"AUTH ERROR: No user in response for token prefix {token[:10]}...")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid or expired session",
+                detail="Invalid or expired session. Please login again.",
                 headers={"WWW-Authenticate": "Bearer"},
             )
         
+        user = user_response.user
         # We return the user object as a dictionary-like structure for consistency
         return {
-            "id": user_response.user.id,
-            "email": user_response.user.email,
-            "user_metadata": user_response.user.user_metadata
+            "id": user.id,
+            "email": user.email,
+            "user_metadata": getattr(user, 'user_metadata', {})
         }
         
     except Exception as e:
+        print(f"AUTH EXCEPTION: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Session has expired or is invalid. Please login again.",
+            detail=f"Authentication failed: {str(e)}",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
