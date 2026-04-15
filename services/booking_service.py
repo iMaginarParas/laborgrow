@@ -175,12 +175,18 @@ class BookingService:
             valid_bookings = []
             from services.worker_service import WorkerService
             for b in bookings:
+                # Format Worker context
                 if b.get("worker"):
                     b["worker"] = WorkerService._format_worker(b["worker"])
-                    valid_bookings.append(b)
-                else:
-                    from core.logger import logger
-                    logger.warning(f"Booking {b.get('id')} is missing worker data. Skipping.")
+                
+                # Format Customer context (ensure 'name' exists for UI consistency)
+                if b.get("customer"):
+                    cust = b["customer"]
+                    cust["name"] = cust.get("company_name") or cust.get("full_name") or "Customer"
+                    # Flatten/normalize avatar for the frontend
+                    cust["avatar_url"] = cust.get("avatar_url") or cust.get("profile_pic_url")
+                
+                valid_bookings.append(b)
             
             return valid_bookings
         except Exception as e:
