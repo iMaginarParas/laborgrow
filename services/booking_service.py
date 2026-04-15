@@ -180,7 +180,7 @@ class BookingService:
             employer_profiles = {}
             if customer_ids:
                 from database import get_supabase
-                res = get_supabase().table("employers").select("id, company_name, profile_pic_url").in_("id", customer_ids).execute()
+                res = get_supabase().table("employers").select("id, company_name").in_("id", customer_ids).execute()
                 employer_profiles = {row["id"]: row for row in (res.data or [])}
 
             for b in bookings:
