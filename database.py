@@ -1,6 +1,7 @@
 import os
 from supabase import create_client, Client
 from config.settings import settings
+from core.logger import logger
 
 # Global singleton — initialised once at startup
 supabase: Client = None
