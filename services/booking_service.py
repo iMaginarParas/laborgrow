@@ -114,10 +114,18 @@ class BookingService:
 
         except Exception as e:
             from core.logger import logger
+            err_msg = str(e).lower()
             logger.error(f"Booking flow issue: {str(e)}")
             
+            # Specific handling for RLS/Permissions
+            if "security policy" in err_msg or "privilege" in err_msg or "42501" in err_msg:
+                 raise HTTPException(
+                     status_code=status.HTTP_403_FORBIDDEN, 
+                     detail="Database permission error. This usually means the backend is not using a Service Role key or the user is not authorized to create this booking."
+                 )
+
             # Fallback logic for development resilience
-            if worker and ("schema cache" in str(e).lower() or "not found" in str(e).lower() or "relation" in str(e).lower()):
+            if worker and ("schema cache" in err_msg or "not found" in err_msg or "relation" in err_msg):
                  from services.worker_service import WorkerService
                  formatted_worker = WorkerService._format_worker(worker)
                  

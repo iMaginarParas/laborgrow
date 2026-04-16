@@ -62,7 +62,21 @@ async def log_requests(request: Request, call_next):
     print(f"DEBUG: {request.method} {request.url.path}")
     
     start_time = time.time()
-    response: Response = await call_next(request)
+    try:
+        response: Response = await call_next(request)
+    except Exception as e:
+        # Catch everything to ensure valid response for CORS
+        logger.error(f"Critical Middleware Exception: {str(e)}", path=request.url.path)
+        from fastapi.responses import JSONResponse
+        response = JSONResponse(
+            status_code=500,
+            content={
+                "status": "error",
+                "message": "Internal Server Error",
+                "detail": str(e)
+            }
+        )
+    
     process_time = time.time() - start_time
     
     # Log status code to terminal
