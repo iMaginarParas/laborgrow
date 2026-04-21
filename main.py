@@ -102,6 +102,7 @@ app.add_middleware(
     allow_origins=[
         "https://laborgroadmin1.netlify.app",
         "https://laborgro.netlify.app",
+        "https://laborgro2.netlify.app",
         "https://laborgro.com",
         "https://www.laborgro.com",
         "http://localhost:3000",
