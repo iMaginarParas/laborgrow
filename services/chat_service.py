@@ -28,7 +28,7 @@ class ChatService:
             "user_id": receiver_id,
             "title": "New Message",
             "message": f"You received a new message.",
-            "type": "chat"
+            "type": "message"
         }
         try:
             supabase.table("notifications").insert(notif_data).execute()
