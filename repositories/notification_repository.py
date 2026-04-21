@@ -15,7 +15,7 @@ class NotificationRepository(BaseRepository):
 
     async def mark_as_read(self, notification_id: str) -> bool:
         result = self.get_client().table(self.table_name)\
-            .update({"read": True})\
+            .update({"is_read": True})\
             .eq("id", notification_id)\
             .execute()
         return len(result.data) > 0 if result.data else False

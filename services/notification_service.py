@@ -14,7 +14,7 @@ class NotificationService:
             "title": title,
             "message": message,
             "type": type,
-            "read": False
+            "is_read": False
         }
         try:
             return await NotificationService._repo.insert(data)
