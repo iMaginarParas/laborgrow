@@ -52,11 +52,10 @@ class WorkerService:
             "lat": data.get("lat") or 0.0,
             "lng": data.get("lng") or 0.0,
             "experience_years": work_details.get("experience_years", data.get("experience_years") or 0),
-            "hourly_rate": work_details.get("hourly_rate", data.get("hourly_rate") or 500.0),
+            "daily_rate": work_details.get("daily_rate", work_details.get("hourly_rate", data.get("hourly_rate") or 500.0)),
             "rating": data.get("rating") or 4.5,
             "is_verified": data.get("is_verified") or False,
             "is_available": data.get("is_available") if data.get("is_available") is not None else True,
-            "min_hours": work_details.get("min_hours", data.get("min_hours") or 1),
             "user": {
                 "id": data.get("id"),
                 "name": data.get("full_name") or "Worker",
@@ -100,11 +99,11 @@ class WorkerService:
                 if any(cat['slug'] == category_slug for cat in w['categories'])
             ]
             
-        # Filter by price in Python if hourly_rate is in work_details
+        # Filter by price in Python if daily_rate is in work_details
         if max_price:
             formatted_workers = [
                 w for w in formatted_workers
-                if w['hourly_rate'] <= max_price
+                if w['daily_rate'] <= max_price
             ]
             
         # Filter by search keyword (name or skills)

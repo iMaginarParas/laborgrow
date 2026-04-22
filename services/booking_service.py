@@ -19,14 +19,13 @@ class BookingService:
 
     @staticmethod
     def calculate_pricing(
-        hourly_rate: float, 
-        hours: int, 
+        daily_rate: float, 
         is_first_booking: bool = False
     ) -> Dict[str, float]:
         """
-        Standard LaborGrow pricing model: (Rate * Hours) + ₹50 fee - 20% discount (on first booking).
+        Standard LaborGrow pricing model: Daily Rate + ₹50 fee - 20% discount (on first booking).
         """
-        base_amount = hourly_rate * hours
+        base_amount = daily_rate
         platform_fee = 50.0  # Fixed marketplace platform fee
         discount = base_amount * 0.20 if is_first_booking else 0.0
         total = base_amount + platform_fee - discount
@@ -68,8 +67,7 @@ class BookingService:
             is_first = booking_count == 0
             
             pricing = BookingService.calculate_pricing(
-                hourly_rate=worker.get("hourly_rate", 500.0), # Default if missing
-                hours=booking_in.hours,
+                daily_rate=worker.get("hourly_rate", 500.0), # Use stored rate as daily rate
                 is_first_booking=is_first
             )
 
@@ -80,7 +78,7 @@ class BookingService:
                 "category_id": booking_in.category_id,
                 "booking_date": booking_in.booking_date,
                 "time_slot": booking_in.time_slot,
-                "hours": booking_in.hours,
+                "hours": 8, # Fixed 8-hour shift for daily basis
                 "address": booking_in.address,
                 "total_amount": pricing["total_amount"],
                 "platform_fee": pricing["platform_fee"],
@@ -135,7 +133,6 @@ class BookingService:
                      "worker": formatted_worker,
                      "booking_date": booking_in.booking_date,
                      "time_slot": booking_in.time_slot,
-                     "hours": booking_in.hours,
                      "address": booking_in.address,
                      "total_amount": 550.0,
                      "platform_fee": 50.0,

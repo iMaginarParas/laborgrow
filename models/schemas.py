@@ -89,8 +89,7 @@ class WorkerBase(BaseModel):
     lat: Optional[float] = 0.0
     lng: Optional[float] = 0.0
     experience_years: Optional[int] = 0
-    hourly_rate: Optional[float] = 0.0
-    min_hours: int = 1
+    daily_rate: Optional[float] = 0.0
 
 class WorkerResponse(WorkerBase):
     id: UUID
@@ -119,7 +118,6 @@ class BookingCreate(BaseModel):
     category_id: int
     booking_date: str
     time_slot: str
-    hours: int
     address: str
 
 class BookingResponse(BaseModel):
@@ -129,7 +127,6 @@ class BookingResponse(BaseModel):
     worker: WorkerResponse
     booking_date: str
     time_slot: str
-    hours: int
     address: str
     total_amount: float
     platform_fee: float
