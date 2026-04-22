@@ -5,7 +5,7 @@ class NotificationService:
     _repo = NotificationRepository()
 
     @staticmethod
-    async def create_notification(user_id: str, title: str, message: str, type: str = "general") -> Dict[str, Any]:
+    async def create_notification(user_id: str, title: str, message: str, type: str = "general", link_id: str = None) -> Dict[str, Any]:
         """
         Creates an in-app notification for a developer or worker.
         """
@@ -16,10 +16,13 @@ class NotificationService:
             "type": type,
             "is_read": False
         }
+        if link_id:
+            data["link_id"] = link_id
+            
         try:
             return await NotificationService._repo.insert(data)
         except Exception as e:
-            # If the table doesn't exist, log it and don't crash
+            # If the table doesn't exist or column is missing, log it and don't crash
             print(f"FAILED TO SEND NOTIFICATION: {e}")
             return None
 

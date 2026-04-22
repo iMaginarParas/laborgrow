@@ -50,7 +50,8 @@ class ApplicationService:
                     user_id=str(job["employer_id"]),
                     title="New Job Applicant!",
                     message=f"Someone just applied for your job: {job.get('title')}. Review them now.",
-                    type="application"
+                    type="application",
+                    link_id=str(job_id_int)
                 )
             return result
         except Exception as e:
@@ -99,7 +100,8 @@ class ApplicationService:
                 user_id=str(app["worker_id"]),
                 title=f"Application {status.capitalize()}!",
                 message=f"Your application for {job_title} has been {status}.",
-                type="application_status"
+                type="application_status",
+                link_id=str(app.get("job_id"))
             )
         return updated
 

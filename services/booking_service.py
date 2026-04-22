@@ -96,7 +96,8 @@ class BookingService:
                 user_id=str(booking_in.worker_id),
                 title="New Booking Received!",
                 message=f"You have a new booking for {booking_in.booking_date} at {booking_in.time_slot}. Check your dashboard.",
-                type="booking"
+                type="booking",
+                link_id=new_booking_data["id"]
             )
             
             # 3. Retrieve hydrated booking
