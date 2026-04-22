@@ -53,3 +53,21 @@ async def get_booking_detail(
         
     return booking
 
+@router.patch("/{booking_id}/status", response_model=BookingResponse)
+async def update_booking_status(
+    booking_id: uuid.UUID,
+    status_data: Dict[str, str],
+    current_user: Dict[str, Any] = Depends(get_current_user)
+) -> Any:
+    """
+    Update the status of a specific booking (e.g., mark as completed).
+    """
+    new_status = status_data.get("status")
+    if not new_status:
+        raise HTTPException(status_code=400, detail="Missing status in request body.")
+        
+    return await BookingService.update_booking_status(
+        booking_id=str(booking_id),
+        new_status=new_status,
+        user_id=current_user["id"]
+    )

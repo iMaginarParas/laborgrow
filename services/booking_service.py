@@ -215,3 +215,37 @@ class BookingService:
             logger.error(f"Error listing bookings for {customer_id}: {str(e)}")
             return []
 
+    @staticmethod
+    async def update_booking_status(
+        booking_id: str,
+        new_status: str,
+        user_id: str
+    ) -> Dict[str, Any]:
+        """
+        Update the lifecycle state of a booking.
+        """
+        # 1. Fetch current booking to check ownership
+        booking = await BookingService._booking_repo.find_by_id(booking_id)
+        if not booking:
+            raise HTTPException(status_code=404, detail="Booking not found.")
+        
+        # 2. Authorization: Only the customer or the assigned worker can update
+        if str(booking["customer_id"]) != str(user_id) and str(booking["worker_id"]) != str(user_id):
+            raise HTTPException(status_code=403, detail="Not authorized to update this booking.")
+        
+        # 3. Apply update
+        update_data = {"status": new_status}
+        await BookingService._booking_repo.update(booking_id, update_data)
+        
+        # 4. Notify the other party
+        other_party_id = booking["worker_id"] if str(booking["customer_id"]) == str(user_id) else booking["customer_id"]
+        
+        await NotificationService.create_notification(
+            user_id=str(other_party_id),
+            title=f"Booking {new_status.capitalize()}",
+            message=f"Your booking ref {booking['booking_ref']} has been updated to {new_status}.",
+            type="booking",
+            link_id=booking_id
+        )
+        
+        return await BookingService.get_booking_detail(booking_id)
