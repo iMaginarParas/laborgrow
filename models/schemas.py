@@ -124,6 +124,8 @@ class BookingCreate(BaseModel):
 
 class BookingResponse(BaseModel):
     id: UUID
+    worker_id: UUID
+    customer_id: UUID
     worker: WorkerResponse
     booking_date: str
     time_slot: str
