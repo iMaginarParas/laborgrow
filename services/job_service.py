@@ -12,6 +12,18 @@ class JobService:
     _category_repo = CategoryRepository() # Need to import this or manage categories
 
     @staticmethod
+    def _map_job_data(job: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Flattens nested employer data and ensures consistent field naming.
+        """
+        mapped = dict(job)
+        employer = mapped.pop("employer", None)
+        if employer:
+            mapped["employer_name"] = employer.get("company_name") or "Employer"
+            mapped["employer_avatar_url"] = employer.get("logo_url") or employer.get("profile_pic_url")
+        return mapped
+
+    @staticmethod
     async def list_jobs(
         city: Optional[str] = None,
         min_salary: Optional[float] = None,
@@ -45,22 +57,34 @@ class JobService:
                    search in (j['description'] or "").lower()
             ]
 
-        return jobs
+        return [JobService._map_job_data(j) for j in jobs]
+
+    @staticmethod
     async def get_nearby_jobs(lat: float, lng: float, radius_km: float = 10.0) -> List[Dict[str, Any]]:
         """
-        Fetch all jobs, calculate distance to worker,
-        and filter within a specified radius (default 10km).
+        Efficiently fetches jobs within a bounding box, then calculates 
+        precise distance and filters by radius.
         """
         try:
-            # 1. Fetch available jobs using repository
-            jobs = await JobService._job_repo.list_all()
+            # 1. Calculate bounding box (approximate)
+            # 1 degree lat is ~111km
+            lat_delta = radius_km / 111.0
+            # 1 degree lng is ~111km * cos(lat)
+            import math
+            lng_delta = radius_km / (111.0 * math.cos(math.radians(lat)))
+
+            min_lat, max_lat = lat - lat_delta, lat + lat_delta
+            min_lng, max_lng = lng - lng_delta, lng + lng_delta
+
+            # 2. Fetch jobs within box using repository
+            jobs = await JobService._job_repo.list_in_bbox(min_lat, max_lat, min_lng, max_lng)
 
             if not jobs:
                 return []
 
             nearby_jobs = []
 
-            # 2. Distance calculation
+            # 3. Precise distance calculation & filtering
             for job in jobs:
                 job_lat = job.get("lat")
                 job_lng = job.get("lng")
@@ -70,16 +94,18 @@ class JobService:
 
                 distance = haversine_distance(lat, lng, job_lat, job_lng)
                 
-                job_with_distance = dict(job)
-                job_with_distance["distance_km"] = round(distance, 2)
-                nearby_jobs.append(job_with_distance)
+                if distance <= radius_km:
+                    job_with_distance = dict(job)
+                    job_with_distance["distance_km"] = round(distance, 2)
+                    nearby_jobs.append(job_with_distance)
 
-            # 3. Sort by proximity (closest first)
+            # 4. Sort by proximity (closest first)
             nearby_jobs.sort(key=lambda x: x["distance_km"])
 
-            return nearby_jobs
+            return [JobService._map_job_data(j) for j in nearby_jobs]
 
         except Exception as e:
+            logger.error(f"Error in proximity search: {str(e)}")
             raise e
 
     @staticmethod
@@ -87,7 +113,8 @@ class JobService:
         """
         Unified method to fetch job details.
         """
-        return await JobService._job_repo.find_with_category(job_id)
+        job = await JobService._job_repo.find_with_category(job_id)
+        return JobService._map_job_data(job) if job else None
 
     @staticmethod
     async def create_job(job_in: Dict[str, Any], employer_id: str) -> Dict[str, Any]:
@@ -135,4 +162,5 @@ class JobService:
 
     @staticmethod
     async def list_employer_jobs(employer_id: str) -> List[Dict[str, Any]]:
-        return await JobService._job_repo.list_by_employer(employer_id)
+        jobs = await JobService._job_repo.list_by_employer(employer_id)
+        return [JobService._map_job_data(j) for j in jobs]

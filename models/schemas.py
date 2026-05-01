@@ -167,6 +167,8 @@ class JobCreate(BaseModel):
 class JobResponse(BaseModel):
     id: Any
     employer_id: Any = None
+    employer_name: Optional[str] = "Employer"
+    employer_avatar_url: Optional[str] = None
     title: str = ''
     description: str = ''
     category_id: Optional[int] = None
@@ -179,6 +181,7 @@ class JobResponse(BaseModel):
     status: str = "open"
     created_at: Optional[datetime] = None
     category: Optional[CategoryResponse] = None
+
     class Config:
         from_attributes = True
 

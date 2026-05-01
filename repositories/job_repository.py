@@ -9,7 +9,7 @@ class JobRepository(BaseRepository):
         result = self.get_client().table(self.table_name).select("id", count="exact").execute()
         return result.count or 0
 
-    async def list_all(self, select: str = "*, category:categories(*)") -> List[Dict[str, Any]]:
+    async def list_all(self, select: str = "*, category:categories(*), employer:employers(*)") -> List[Dict[str, Any]]:
         result = self.get_client().table(self.table_name).select(select).execute()
         return result.data or []
 
@@ -19,7 +19,7 @@ class JobRepository(BaseRepository):
         min_salary: Optional[float] = None,
         category_id: Optional[int] = None
     ) -> List[Dict[str, Any]]:
-        query = self.get_client().table(self.table_name).select("*, category:categories(*)")\
+        query = self.get_client().table(self.table_name).select("*, category:categories(*), employer:employers(*)")\
             .eq("status", "open")
         
         if city:
@@ -50,7 +50,22 @@ class JobRepository(BaseRepository):
 
     async def find_with_category(self, job_id: str) -> Optional[Dict[str, Any]]:
         result = self.get_client().table(self.table_name)\
-            .select("*, category:categories(*)")\
+            .select("*, category:categories(*), employer:employers(*)")\
             .eq("id", str(job_id))\
             .execute()
         return result.data[0] if result.data else None
+
+    async def list_in_bbox(self, min_lat: float, max_lat: float, min_lng: float, max_lng: float) -> List[Dict[str, Any]]:
+        """
+        Fetches jobs within a rectangular bounding box. 
+        Highly efficient first-pass for proximity search.
+        """
+        result = self.get_client().table(self.table_name)\
+            .select("*, category:categories(*), employer:employers(*)")\
+            .gte("lat", min_lat)\
+            .lte("lat", max_lat)\
+            .gte("lng", min_lng)\
+            .lte("lng", max_lng)\
+            .eq("status", "open")\
+            .execute()
+        return result.data or []
