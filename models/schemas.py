@@ -68,6 +68,11 @@ class LoginRequest(BaseModel):
     phone_or_email: str = Field(..., min_length=3)
     password: str = Field(..., min_length=1)
 
+class GoogleLoginRequest(BaseModel):
+    """Request body for Google Sign-In authentication."""
+    id_token: str = Field(..., min_length=10, description="Google ID token from the client")
+    role: Optional[str] = "employer"
+
 # --- SERVICE CATEGORY SCHEMAS ---
 class CategoryBase(BaseModel):
     name: str

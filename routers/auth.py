@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Any, Dict
 
 from database import get_supabase
-from models.schemas import UserCreate, Token, LoginRequest, UserResponse
+from models.schemas import UserCreate, Token, LoginRequest, UserResponse, GoogleLoginRequest
 from services.auth_service import AuthService
+from services.google_auth_service import GoogleAuthService
 from dependencies.auth import get_current_user
 
 router = APIRouter(prefix="/auth", tags=["User Authentication"])
@@ -32,6 +33,21 @@ async def login(
         "token_type": "bearer"
     }
 
+@router.post("/google")
+async def google_login(
+    payload: GoogleLoginRequest,
+) -> Dict[str, Any]:
+    """
+    Authenticate (or register) a user via Google Sign-In.
+    Accepts a Google ID token, verifies it server-side, and returns
+    Supabase access/refresh tokens.
+    """
+    result = await GoogleAuthService.authenticate_with_google(
+        id_token=payload.id_token,
+        role=payload.role or "employer",
+    )
+    return result
+
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user: Dict[str, Any] = Depends(get_current_user)) -> Any:
     """
@@ -54,3 +70,4 @@ async def update_me(
     if not profile:
         raise HTTPException(status_code=404, detail="User profile not found")
     return profile
+

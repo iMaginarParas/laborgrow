@@ -30,3 +30,6 @@ googlemaps==4.10.0
 
 # Environment
 python-dotenv==1.0.1
+
+# HTTP Client (Google OAuth verification)
+httpx==0.28.1
