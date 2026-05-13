@@ -4,7 +4,7 @@ from models.admin_schemas import AdminLogin, Token
 from database import get_supabase
 from datetime import datetime
 
-router = APIRouter(prefix="/auth", tags=["Admin Authentication"])
+router = APIRouter(tags=["Admin Authentication"])
 
 @router.post("/login", response_model=Token)
 async def admin_login(login_data: AdminLogin):

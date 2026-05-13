@@ -7,7 +7,7 @@ from services.auth_service import AuthService
 from services.google_auth_service import GoogleAuthService
 from dependencies.auth import get_current_user
 
-router = APIRouter(prefix="/auth", tags=["User Authentication"])
+router = APIRouter(tags=["User Authentication"])
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(

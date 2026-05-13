@@ -4,6 +4,7 @@ from fastapi.exceptions import RequestValidationError
 import time
 import uvicorn
 import os
+from datetime import datetime
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 # Strategic Production Imports
@@ -46,9 +47,21 @@ app = FastAPI(
 @app.on_event("startup")
 async def startup_event():
     """
-    Bootstrap the application resources.
+    Bootstrap the application resources and verify routing.
     """
     init_supabase()
+    
+    # Print all registered routes for debugging
+    print("\n--- REGISTERED ROUTES ---")
+    with open("c:/Users/Sunil/OneDrive/Desktop/laborgro/backend/routes_debug.txt", "w") as f:
+        f.write(f"--- ROUTES AT {datetime.now().isoformat()} ---\n")
+        for route in app.routes:
+            if hasattr(route, "path"):
+                line = f"ROUTE: {route.path} | Methods: {getattr(route, 'methods', 'N/A')}\n"
+                print(line, end="")
+                f.write(line)
+    print("-------------------------\n")
+    
     logger.info("Application bootstrap complete", status="ready")
 
 # --- MIDDLEWARE STACK ---
@@ -125,7 +138,7 @@ app.add_exception_handler(Exception, generic_exception_handler)
 # --- ROUTE REGISTRATION (API V1) ---
 
 # We nest all production routes under the /api/v1 version prefix
-app.include_router(auth_router, prefix=f"{settings.API_V1_STR}")
+app.include_router(auth_router, prefix=f"{settings.API_V1_STR}/auth")
 app.include_router(workers_router, prefix=f"{settings.API_V1_STR}")
 app.include_router(categories_router, prefix=f"{settings.API_V1_STR}")
 app.include_router(bookings_router, prefix=f"{settings.API_V1_STR}")
@@ -137,7 +150,7 @@ app.include_router(hire_router, prefix=f"{settings.API_V1_STR}")
 app.include_router(worker_dashboard_router, prefix=f"{settings.API_V1_STR}")
 app.include_router(notifications_router, prefix=f"{settings.API_V1_STR}")
 app.include_router(chat_router, prefix=f"{settings.API_V1_STR}")
-app.include_router(admin_auth_router, prefix=f"{settings.API_V1_STR}/admin")
+app.include_router(admin_auth_router, prefix=f"{settings.API_V1_STR}/admin/auth")
 app.include_router(admin_control_center_router, prefix=f"{settings.API_V1_STR}")
 app.include_router(admin_users_router, prefix=f"{settings.API_V1_STR}")
 app.include_router(admin_workers_router, prefix=f"{settings.API_V1_STR}")
