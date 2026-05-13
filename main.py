@@ -53,13 +53,16 @@ async def startup_event():
     
     # Print all registered routes for debugging
     print("\n--- REGISTERED ROUTES ---")
-    with open("c:/Users/Sunil/OneDrive/Desktop/laborgro/backend/routes_debug.txt", "w") as f:
-        f.write(f"--- ROUTES AT {datetime.now().isoformat()} ---\n")
-        for route in app.routes:
-            if hasattr(route, "path"):
-                line = f"ROUTE: {route.path} | Methods: {getattr(route, 'methods', 'N/A')}\n"
-                print(line, end="")
-                f.write(line)
+    try:
+        with open("routes_debug.txt", "w") as f:
+            f.write(f"--- ROUTES AT {datetime.now().isoformat()} ---\n")
+            for route in app.routes:
+                if hasattr(route, "path"):
+                    line = f"ROUTE: {route.path} | Methods: {getattr(route, 'methods', 'N/A')}\n"
+                    print(line, end="")
+                    f.write(line)
+    except Exception as e:
+        print(f"Warning: Could not write routes_debug.txt: {e}")
     print("-------------------------\n")
     
     logger.info("Application bootstrap complete", status="ready")
