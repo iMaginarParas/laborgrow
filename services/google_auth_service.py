@@ -105,20 +105,34 @@ class GoogleAuthService:
                 except Exception as signup_err:
                     err_msg = str(signup_err).lower()
                     if "already registered" in err_msg or "already exists" in err_msg:
-                        # Edge case: user registered with email/password before.
-                        # We cannot sign them in with the Google-derived password.
-                        logger.warning(
-                            "Google sign-in: user exists with different password",
-                            email=email,
-                        )
-                        raise HTTPException(
-                            status_code=status.HTTP_409_CONFLICT,
-                            detail=(
-                                "This email is already registered with a password. "
-                                "Please sign in with your email and password instead."
-                            ),
-                        )
-                    raise
+                        # Account Linking: The user exists but hasn't linked Google yet.
+                        # We verify they own the email via Google Token, then sync their
+                        # internal password to allow Google Login to proceed.
+                        logger.info("Syncing existing account with Google sign-in", email=email)
+                        
+                        existing_profile = await GoogleAuthService._user_repo.find_profile_by_email(email)
+                        if existing_profile:
+                            user_id = existing_profile["id"]
+                            # Sync the password via Admin API
+                            client.auth.admin.update_user_by_id(
+                                user_id, 
+                                {"password": internal_password}
+                            )
+                            # Retry sign-in
+                            auth_response = client.auth.sign_in_with_password({
+                                "email": email,
+                                "password": internal_password,
+                            })
+                        else:
+                            # User exists in auth.users but no profile found.
+                            # We might need to find the user ID from auth.users directly.
+                            # For safety, we'll try to update them if we can find them.
+                            raise HTTPException(
+                                status_code=status.HTTP_409_CONFLICT,
+                                detail="This email is already registered. Please sign in with your email/password first to link Google."
+                            )
+                    else:
+                        raise
 
             user = auth_response.user
             session = auth_response.session

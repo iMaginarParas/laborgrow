@@ -22,6 +22,23 @@ class UserRepository:
             profile["role"] = "employer"
             return profile
 
+    async def find_profile_by_email(self, email: str) -> Optional[Dict[str, Any]]:
+        client = get_supabase()
+        
+        # Try employees
+        res = client.table("employees").select("*").eq("email", email).execute()
+        if res.data:
+            profile = res.data[0]
+            profile["role"] = "employee"
+            return profile
+            
+        # Try employers
+        res = client.table("employers").select("*").eq("email", email).execute()
+        if res.data:
+            profile = res.data[0]
+            profile["role"] = "employer"
+            return profile
+            
         return None
 
     async def update_profile(self, user_id: str, table_name: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
