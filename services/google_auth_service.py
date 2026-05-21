@@ -74,65 +74,13 @@ class GoogleAuthService:
         try:
             client = get_supabase()
 
-            # Step 2: Try to sign in with a deterministic password derived from
-            # the Google sub (the user never types this — it's only for Supabase
-            # internal auth). If the user doesn't exist yet, we create them.
-            google_sub = google_payload.get("sub", "")
-            # Use a long, deterministic password the user never sees
-            internal_password = f"google_{google_sub}_laborgro_oauth"
-
-            try:
-                # Attempt sign-in first (existing user)
-                auth_response = client.auth.sign_in_with_password({
-                    "email": email,
-                    "password": internal_password,
-                })
-            except Exception:
-                # User doesn't exist — create them
-                try:
-                    auth_response = client.auth.sign_up({
-                        "email": email,
-                        "password": internal_password,
-                        "options": {
-                            "data": {
-                                "name": name,
-                                "role": role,
-                                "provider": "google",
-                                "avatar_url": picture,
-                            }
-                        },
-                    })
-                except Exception as signup_err:
-                    err_msg = str(signup_err).lower()
-                    if "already registered" in err_msg or "already exists" in err_msg:
-                        # Account Linking: The user exists but hasn't linked Google yet.
-                        # We verify they own the email via Google Token, then sync their
-                        # internal password to allow Google Login to proceed.
-                        logger.info("Syncing existing account with Google sign-in", email=email)
-                        
-                        existing_profile = await GoogleAuthService._user_repo.find_profile_by_email(email)
-                        if existing_profile:
-                            user_id = existing_profile["id"]
-                            # Sync the password via Admin API
-                            client.auth.admin.update_user_by_id(
-                                user_id, 
-                                {"password": internal_password}
-                            )
-                            # Retry sign-in
-                            auth_response = client.auth.sign_in_with_password({
-                                "email": email,
-                                "password": internal_password,
-                            })
-                        else:
-                            # User exists in auth.users but no profile found.
-                            # We might need to find the user ID from auth.users directly.
-                            # For safety, we'll try to update them if we can find them.
-                            raise HTTPException(
-                                status_code=status.HTTP_409_CONFLICT,
-                                detail="This email is already registered. Please sign in with your email/password first to link Google."
-                            )
-                    else:
-                        raise
+            # Step 2: Use native Supabase ID token sign in.
+            # This verifies the token, creates the user if they don't exist,
+            # and performs native account linking WITHOUT overwriting their password.
+            auth_response = client.auth.sign_in_with_id_token({
+                "provider": "google",
+                "token": id_token
+            })
 
             user = auth_response.user
             session = auth_response.session
