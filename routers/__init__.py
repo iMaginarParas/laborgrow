@@ -14,6 +14,11 @@ from routers.admin_control_center import router as admin_control_center_router
 from routers.admin_users import router as admin_users_router
 from routers.admin_workers import router as admin_workers_router
 from routers.admin_bookings import router as admin_bookings_router
+from routers.admin_disputes import router as admin_disputes_router
+from routers.admin_analytics import router as admin_analytics_router
+from routers.admin_dispatch import router as admin_dispatch_router
+from routers.admin_notifications import router as admin_notifications_router
+from routers.admin_settings import router as admin_settings_router
 
 __all__ = [
     "auth_router",
@@ -32,5 +37,10 @@ __all__ = [
     "admin_control_center_router",
     "admin_users_router",
     "admin_workers_router",
-    "admin_bookings_router"
+    "admin_bookings_router",
+    "admin_disputes_router",
+    "admin_analytics_router",
+    "admin_dispatch_router",
+    "admin_notifications_router",
+    "admin_settings_router"
 ]
