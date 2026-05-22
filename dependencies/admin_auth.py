@@ -47,7 +47,9 @@ def role_required(allowed_roles: List[str]):
     Dependency factory to enforce Role-Based Access Control.
     """
     def role_checker(current_admin: dict = Depends(get_current_admin)):
-        if current_admin["role"] not in allowed_roles:
+        current_role = current_admin["role"].upper()
+        allowed = [r.upper() for r in allowed_roles]
+        if current_role not in allowed:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Operation not permitted. Required roles: {allowed_roles}"
