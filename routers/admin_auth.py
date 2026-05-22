@@ -8,7 +8,18 @@ router = APIRouter(tags=["Admin Authentication"])
 
 @router.post("/login", response_model=Token)
 async def admin_login(login_data: AdminLogin):
-    client = get_supabase()
+    import os
+    from supabase import create_client
+    
+    # Force a fresh client using the Service Role Key to guarantee RLS bypass
+    url = os.environ.get("SUPABASE_URL")
+    # Railway passes it as SUPABASE_SERVICE_ROLE_KEY
+    key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_KEY")
+    
+    if not url or not key:
+        raise HTTPException(status_code=500, detail="Missing Supabase configuration in production environment.")
+        
+    client = create_client(url, key)
     
     # Normalize email
     search_email = login_data.email.lower().strip()
