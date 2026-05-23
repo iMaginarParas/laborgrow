@@ -29,3 +29,11 @@ index.html
 last.html
 post.html
 paras.html
+
+# Temporary & Debug Scripts
+check_rls.py
+debug_auth.py
+seed_admin.py
+test_admin_auth.py
+error_log.txt
+routes_debug.txt
