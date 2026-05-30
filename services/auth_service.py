@@ -145,7 +145,10 @@ class AuthService:
             if "lng" in updates:
                 db_updates["lng"] = updates["lng"]
             if "profile_pic_url" in updates:
-                db_updates["profile_pic_url"] = updates["profile_pic_url"]
+                if table_name == "employers":
+                    db_updates["logo_url"] = updates["profile_pic_url"]
+                else:
+                    db_updates["profile_pic_url"] = updates["profile_pic_url"]
             if "phone" in updates:
                 db_updates["phone"] = updates["phone"]
             if "is_available" in updates:

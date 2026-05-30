@@ -112,8 +112,10 @@ class GoogleAuthService:
                     profile_data["phone"] = ""
 
                 if picture:
-                    profile_data["profile_pic_url"] = picture
-
+                    if table_name == "employers":
+                        profile_data["logo_url"] = picture
+                    else:
+                        profile_data["profile_pic_url"] = picture
                 await GoogleAuthService._user_repo.update_profile(
                     user_id, table_name, profile_data
                 )
