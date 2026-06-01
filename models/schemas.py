@@ -6,7 +6,7 @@ from typing import List, Optional, Any, Dict
 # --- CORE USER SCHEMAS ---
 class UserBase(BaseModel):
     name: str = Field(..., min_length=2, max_length=50)
-    email: EmailStr
+    email: Optional[str] = None
     phone: str = Field(..., min_length=10, max_length=15)
     profile_pic_url: Optional[str] = None
     address: Optional[str] = None

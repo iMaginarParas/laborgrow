@@ -41,6 +41,18 @@ class UserRepository:
             
         return None
 
+    async def find_profile_by_phone(self, phone: str) -> Optional[Dict[str, Any]]:
+        client = get_supabase()
+        
+        # Only employees have a phone column
+        res = client.table("employees").select("*").eq("phone", phone).execute()
+        if res.data:
+            profile = res.data[0]
+            profile["role"] = "employee"
+            return profile
+            
+        return None
+
     async def update_profile(self, user_id: str, table_name: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         client = get_supabase()
         

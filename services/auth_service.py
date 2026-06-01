@@ -20,9 +20,15 @@ class AuthService:
         """
         try:
             client = get_supabase()
+            
+            email_to_use = user_in.email
+            if not email_to_use:
+                clean_phone = user_in.phone.replace("+", "").replace(" ", "")
+                email_to_use = f"{clean_phone}@laborgrow.com"
+
             # 1. Sign up with Supabase Auth
             auth_response = client.auth.sign_up({
-                "email": user_in.email,
+                "email": email_to_use,
                 "password": user_in.password,
                 "options": {
                     "data": {
@@ -46,7 +52,7 @@ class AuthService:
             
             user_data = {
                 "id": auth_response.user.id,
-                "email": user_in.email
+                "email": email_to_use
             }
             if role == "employer":
                 user_data["company_name"] = user_in.name
@@ -90,11 +96,17 @@ class AuthService:
             if "@" in identifier:
                 auth_data = {"email": identifier, "password": login_in.password}
             else:
-                # Format phone number for Supabase
                 phone_number = identifier
-                if len(phone_number) == 10 and not phone_number.startswith("+"):
-                    phone_number = f"+91{phone_number}"
-                auth_data = {"phone": phone_number, "password": login_in.password}
+                
+                # Check DB for user by phone to bypass Supabase's disabled Phone Provider
+                profile = await AuthService._user_repo.find_profile_by_phone(phone_number)
+                if profile and profile.get("email"):
+                    auth_data = {"email": profile["email"], "password": login_in.password}
+                else:
+                    # Format phone number for Supabase
+                    if len(phone_number) == 10 and not phone_number.startswith("+"):
+                        phone_number = f"+91{phone_number}"
+                    auth_data = {"phone": phone_number, "password": login_in.password}
             
             response = client.auth.sign_in_with_password(auth_data)
             
