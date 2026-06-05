@@ -92,22 +92,8 @@ class AuthService:
         """
         try:
             client = get_supabase()
-            identifier = login_in.phone_or_email.strip()
-            if "@" in identifier:
-                auth_data = {"email": identifier, "password": login_in.password}
-            else:
-                phone_number = identifier
-                
-                # Check DB for user by phone to bypass Supabase's disabled Phone Provider
-                profile = await AuthService._user_repo.find_profile_by_phone(phone_number)
-                if profile and profile.get("email"):
-                    auth_data = {"email": profile["email"], "password": login_in.password}
-                else:
-                    # Format phone number for Supabase
-                    if len(phone_number) == 10 and not phone_number.startswith("+"):
-                        phone_number = f"+91{phone_number}"
-                    auth_data = {"phone": phone_number, "password": login_in.password}
             
+            auth_data = {"email": login_in.email.strip(), "password": login_in.password}
             response = client.auth.sign_in_with_password(auth_data)
             
             return {

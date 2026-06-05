@@ -65,7 +65,7 @@ class Token(BaseModel):
     token_type: str
 
 class LoginRequest(BaseModel):
-    phone_or_email: str = Field(..., min_length=3)
+    email: str = Field(..., min_length=3)
     password: str = Field(..., min_length=1)
 
 class GoogleLoginRequest(BaseModel):
