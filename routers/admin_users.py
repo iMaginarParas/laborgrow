@@ -13,13 +13,13 @@ async def get_users(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     search: Optional[str] = None,
-    db: Session = Depends(get_db),
     admin: dict = Depends(role_required(["SUPER_ADMIN", "SUPPORT_ADMIN"]))
 ):
     """
     Paginated user list with optional search.
     """
-    return AdminService.get_paginated_users(db, skip, limit, search)
+    return AdminService.get_paginated_users(None, skip, limit, search)
+
 
 @router.post("/users/suspend")
 async def suspend_user(

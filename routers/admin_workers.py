@@ -14,10 +14,10 @@ async def get_workers(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     search: Optional[str] = None,
-    db: Session = Depends(get_db),
     admin: dict = Depends(role_required(["SUPER_ADMIN", "OPS_ADMIN"]))
 ):
-    return AdminService.get_paginated_workers(db, skip, limit, search)
+    return AdminService.get_paginated_workers(None, skip, limit, search)
+
 
 @router.post("/workers/approve")
 async def approve_worker(
