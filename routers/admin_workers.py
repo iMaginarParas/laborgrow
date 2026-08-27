@@ -7,6 +7,8 @@ from services.worker_service import WorkerService # Assuming existing service
 from uuid import UUID
 from typing import Optional
 
+from models.admin_schemas import AdminCreateWorkerRequest
+
 router = APIRouter(prefix="/admin", tags=["Worker Management"])
 
 @router.get("/workers")
@@ -17,6 +19,24 @@ async def get_workers(
     admin: dict = Depends(role_required(["SUPER_ADMIN", "OPS_ADMIN"]))
 ):
     return AdminService.get_paginated_workers(None, skip, limit, search)
+
+@router.post("/workers")
+async def create_worker(
+    worker_data: AdminCreateWorkerRequest,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(role_required(["SUPER_ADMIN", "OPS_ADMIN"]))
+):
+    """
+    Creates a new worker profile and adds to database.
+    """
+    try:
+        data = worker_data.model_dump()
+        created = AdminService.create_worker(data)
+        log_admin_audit(db, admin["id"], "CREATE_WORKER", str(created.get("id")), {"name": data.get("full_name")})
+        return {"message": "Worker profile created successfully", "worker": created}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 
 @router.post("/workers/approve")

@@ -197,3 +197,82 @@ class AdminService:
         # Logging the broadcast action
         log_admin_audit(db, admin_id, "BROADCAST_MESSAGE", "system", {"title": title})
         return {"status": "broadcast_queued", "admin_id": str(admin_id)}
+
+    @staticmethod
+    def create_worker(data: Dict[str, Any]):
+        """
+        Creates a new worker profile in Supabase Auth and the 'employees' table.
+        """
+        from database import get_supabase
+        client = get_supabase()
+        
+        email = data.get("email")
+        phone = data.get("phone", "")
+        if not email:
+            clean_phone = phone.replace("+", "").replace(" ", "") if phone else str(uuid.uuid4())[:8]
+            email = f"worker_{clean_phone}@laborgro.com"
+
+        hourly_rate_val = int(float(data.get("hourly_rate", 500)))
+        
+        work_details = {
+            "bio": data.get("bio", ""),
+            "experience_years": int(data.get("experience_years", 0)),
+            "hourly_rate": hourly_rate_val,
+            "daily_rate": hourly_rate_val,
+            "category_ids": data.get("category_ids", [1]),
+            "is_verified": data.get("is_verified", True)
+        }
+        
+        skills = data.get("skills", [])
+        primary_category = skills[0] if skills else "General"
+        
+        # 1. Create user in Supabase Auth via admin API
+        try:
+            auth_user = client.auth.admin.create_user({
+                "email": email,
+                "password": f"WorkerPass#{str(uuid.uuid4())[:8]}",
+                "email_confirm": True,
+                "user_metadata": {
+                    "name": data.get("full_name"),
+                    "phone": phone,
+                    "role": "employee"
+                }
+            })
+            worker_id = auth_user.user.id
+        except Exception:
+            alt_email = f"worker_{str(uuid.uuid4())[:8]}@laborgro.com"
+            auth_user = client.auth.admin.create_user({
+                "email": alt_email,
+                "password": f"WorkerPass#{str(uuid.uuid4())[:8]}",
+                "email_confirm": True,
+                "user_metadata": {
+                    "name": data.get("full_name"),
+                    "phone": phone,
+                    "role": "employee"
+                }
+            })
+            worker_id = auth_user.user.id
+            email = alt_email
+
+        payload = {
+            "id": worker_id,
+            "full_name": data.get("full_name"),
+            "email": email,
+            "phone": phone,
+            "city": data.get("city", "Mumbai"),
+            "hourly_rate": hourly_rate_val,
+            "is_available": data.get("is_available", True),
+            "skills": skills,
+            "category": primary_category,
+            "rating": 5.0,
+            "work_details": work_details
+        }
+        
+        res = client.table("employees").insert(payload).execute()
+        if res.data and len(res.data) > 0:
+            return res.data[0]
+        return payload
+
+
+
+
