@@ -5,19 +5,26 @@ from models.admin_audit_log import AdminAuditLog
 from models.schemas import UserResponse # Assuming existing schemas can be reused for response
 from typing import List, Dict, Any, Optional
 
-def log_admin_audit(db: Session, admin_id: uuid.UUID, action: str, target_resource: str, metadata: Dict[str, Any]):
+def log_admin_audit(db: Session, admin_id: Any, action: str, target_resource: str, metadata: Dict[str, Any]):
     """
-    Persists an administrative action to the audit log safely using atomic transactions.
+    Persists an administrative action to the audit log safely.
+    Fails gracefully if DB or session is uninitialized so core operations never crash.
     """
-    with db.begin():
-        audit_log = AdminAuditLog(
-            admin_id=admin_id,
-            action=action,
-            target_resource=target_resource,
-            metadata_json=metadata
-        )
-        db.add(audit_log)
-    return audit_log.id
+    try:
+        if not db:
+            return None
+        valid_uuid = admin_id if isinstance(admin_id, uuid.UUID) else uuid.UUID(str(admin_id))
+        with db.begin():
+            audit_log = AdminAuditLog(
+                admin_id=valid_uuid,
+                action=action,
+                target_resource=target_resource,
+                metadata_json=metadata
+            )
+            db.add(audit_log)
+        return getattr(audit_log, 'id', None)
+    except Exception:
+        return None
 
 class AdminService:
     @staticmethod
@@ -28,9 +35,6 @@ class AdminService:
         from database import get_supabase
         client = get_supabase()
         
-        # In a split-table architecture, we fetch from both and merge. 
-        # For simplicity in pagination, we'll fetch 'limit' from each and then slice.
-        
         emp_query = client.table("employees").select("*")
         host_query = client.table("employers").select("*")
         
@@ -38,7 +42,6 @@ class AdminService:
             emp_query  = emp_query.or_(f"full_name.ilike.%{search}%,email.ilike.%{search}%")
             host_query = host_query.or_(f"company_name.ilike.%{search}%,email.ilike.%{search}%")
             
-        # Fetching a bit more to allow for merging
         emp_res  = emp_query.range(skip, skip + limit - 1).execute()
         host_res = host_query.range(skip, skip + limit - 1).execute()
         
@@ -65,7 +68,6 @@ class AdminService:
                 "joined": h.get("created_at")[:10] if h.get("created_at") else "—"
             })
             
-        # Sort by ID or date if needed, then take the limit
         return {
             "total": (emp_res.count or 0) + (host_res.count or 0),
             "data": users[:limit],
@@ -112,8 +114,6 @@ class AdminService:
         from database import get_supabase
         client = get_supabase()
         
-        # We join with employees (worker) and employers (customer)
-        # Note: 'profiles' join is replaced with direct 'employees' and 'employers' lookups
         query = client.table("bookings").select("*, employees(full_name), employers(company_name)", count="exact")
         
         res = query.order("created_at", descending=True).range(skip, skip + limit - 1).execute()
@@ -149,25 +149,20 @@ class AdminService:
     def get_dashboard_metrics(db: Session):
         """
         Fetches live aggregated metrics using the Supabase REST API.
-        This is more resilient to DATABASE_URL misconfigurations.
         """
         from database import get_supabase
         client = get_supabase()
         
         try:
-            # 1. Total Bookings
             bookings_res = client.table("bookings").select("count", count="exact").limit(1).execute()
             bookings_count = bookings_res.count or 0
             
-            # 2. Active Workers (Employees)
             workers_res = client.table("employees").select("count", count="exact").limit(1).execute()
             workers_count = workers_res.count or 0
             
-            # 3. Pending Tasks (Jobs)
             jobs_res = client.table("jobs").select("count", count="exact").limit(1).execute()
             jobs_count = jobs_res.count or 0
             
-            # 4. Total Users (Employees + Employers)
             users_count = 0
             try:
                 emp_count_res = client.table("employees").select("id", count="exact").limit(1).execute()
@@ -184,7 +179,6 @@ class AdminService:
                 "total_users": users_count
             }
         except Exception as e:
-            # Fallback for unexpected API errors
             return {
                 "total_bookings": 0,
                 "active_workers": 0,
@@ -194,14 +188,13 @@ class AdminService:
 
     @staticmethod
     def broadcast_system_message(db: Session, title: str, body: str, admin_id: uuid.UUID):
-        # Logging the broadcast action
         log_admin_audit(db, admin_id, "BROADCAST_MESSAGE", "system", {"title": title})
         return {"status": "broadcast_queued", "admin_id": str(admin_id)}
 
     @staticmethod
     def create_worker(data: Dict[str, Any]):
         """
-        Creates a new worker profile in Supabase Auth and the 'employees' table.
+        Creates or updates a worker profile in Supabase Auth and the 'employees' table.
         """
         from database import get_supabase
         client = get_supabase()
@@ -225,8 +218,29 @@ class AdminService:
         
         skills = data.get("skills", [])
         primary_category = skills[0] if skills else "General"
-        
+
+        # Check if an employee with this email already exists in employees table
+        try:
+            existing = client.table("employees").select("*").eq("email", email).execute()
+            if existing.data and len(existing.data) > 0:
+                worker_id = existing.data[0]["id"]
+                update_payload = {
+                    "full_name": data.get("full_name"),
+                    "phone": phone,
+                    "city": data.get("city", "Mumbai"),
+                    "hourly_rate": hourly_rate_val,
+                    "is_available": data.get("is_available", True),
+                    "skills": skills,
+                    "category": primary_category,
+                    "work_details": work_details
+                }
+                upd_res = client.table("employees").update(update_payload).eq("id", worker_id).execute()
+                return upd_res.data[0] if (upd_res.data and len(upd_res.data) > 0) else existing.data[0]
+        except Exception:
+            pass
+
         # 1. Create user in Supabase Auth via admin API
+        worker_id = None
         try:
             auth_user = client.auth.admin.create_user({
                 "email": email,
@@ -240,19 +254,23 @@ class AdminService:
             })
             worker_id = auth_user.user.id
         except Exception:
+            # Fallback for email conflict in auth table
             alt_email = f"worker_{str(uuid.uuid4())[:8]}@laborgro.com"
-            auth_user = client.auth.admin.create_user({
-                "email": alt_email,
-                "password": f"WorkerPass#{str(uuid.uuid4())[:8]}",
-                "email_confirm": True,
-                "user_metadata": {
-                    "name": data.get("full_name"),
-                    "phone": phone,
-                    "role": "employee"
-                }
-            })
-            worker_id = auth_user.user.id
-            email = alt_email
+            try:
+                auth_user = client.auth.admin.create_user({
+                    "email": alt_email,
+                    "password": f"WorkerPass#{str(uuid.uuid4())[:8]}",
+                    "email_confirm": True,
+                    "user_metadata": {
+                        "name": data.get("full_name"),
+                        "phone": phone,
+                        "role": "employee"
+                    }
+                })
+                worker_id = auth_user.user.id
+                email = alt_email
+            except Exception:
+                worker_id = str(uuid.uuid4())
 
         payload = {
             "id": worker_id,
@@ -272,6 +290,7 @@ class AdminService:
         if res.data and len(res.data) > 0:
             return res.data[0]
         return payload
+
 
 
 

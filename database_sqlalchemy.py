@@ -8,10 +8,15 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if DATABASE_URL and "+asyncpg" in DATABASE_URL:
     DATABASE_URL = DATABASE_URL.replace("+asyncpg", "")
 
+if not DATABASE_URL:
+    DATABASE_URL = "sqlite:///./app.db"
+
 engine = create_engine(
     DATABASE_URL,
+    connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {},
     pool_pre_ping=True
 )
+
 
 SessionLocal = sessionmaker(
     autocommit=False,
