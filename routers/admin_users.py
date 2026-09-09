@@ -13,8 +13,9 @@ async def get_users(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     search: Optional[str] = None,
-    admin: dict = Depends(role_required(["SUPER_ADMIN", "SUPPORT_ADMIN"]))
+    admin: dict = Depends(role_required(["SUPER_ADMIN", "SUPPORT_ADMIN", "OPS_ADMIN", "ADMIN"]))
 ):
+
     """
     Paginated user list with optional search.
     """
